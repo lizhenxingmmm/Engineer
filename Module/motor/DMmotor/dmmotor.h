@@ -6,7 +6,7 @@
 #include "motor_def.h"
 #include "daemon.h"
 
-#define DM_MOTOR_CNT 4
+#define DM_MOTOR_CNT 5
 
 #define DM_P_MIN     (-12.5f)
 #define DM_P_MAX     12.5f
@@ -32,8 +32,8 @@ typedef struct
 {
     uint16_t position_mit; // MIT模式下的位置值
     uint16_t velocity_mit; // MIT模式下的速度值
-    float position_sp; // 位置速度模式下的位置值
-    float velocity_sp; // 位置速度模式下的速度值
+    float position_sp;     // 位置速度模式下的位置值
+    float velocity_sp;     // 位置速度模式下的速度值
     uint16_t torque_des;
     uint16_t Kp;
     uint16_t Kd;
@@ -57,7 +57,7 @@ typedef struct
     CAN_Instance *motor_can_instace;
     Daemon_Instance *motor_daemon;
     uint32_t lost_cnt;
-} DM_MotorInstance;
+} DM_MotorInstance; // 达妙电机实例
 
 typedef enum {
     DM_CMD_MOTOR_MODE    = 0xfc, // 使能,会响应指令

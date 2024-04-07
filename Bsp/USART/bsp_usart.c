@@ -11,7 +11,7 @@
 
 #include "bsp_usart.h"
 #include "stdlib.h"
-#include "memory.h"
+#include "string.h"
 
 /* usart服务实例,所有注册了usart的模块信息会被保存在这里 */
 static uint8_t idx;
@@ -77,8 +77,6 @@ void USARTSend(USART_Instance *_instance, uint8_t *send_buf, uint16_t send_size,
             HAL_UART_Transmit_DMA(_instance->usart_handle, send_buf, send_size);
             break;
         default:
-            while (1)
-                ; // illegal mode! check your code context! 检查定义instance的代码上下文,可能出现指针越界
             break;
     }
 }
@@ -86,7 +84,7 @@ void USARTSend(USART_Instance *_instance, uint8_t *send_buf, uint16_t send_size,
 /* 串口发送时,gstate会被设为BUSY_TX */
 uint8_t USARTIsReady(USART_Instance *_instance)
 {
-    if (_instance->usart_handle->gState | HAL_UART_STATE_BUSY_TX)
+    if (_instance->usart_handle->gState & HAL_UART_STATE_BUSY_TX)
         return 0;
     else
         return 1;
@@ -105,7 +103,7 @@ uint8_t USARTIsReady(USART_Instance *_instance)
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    for (uint8_t i = 0; i < idx; ++i) {                 // find the instance which is being handled
+    for (uint8_t i = 0; i < idx; ++i) {                  // find the instance which is being handled
         if (huart == usart_instances[i]->usart_handle) { // call the callback function if it is not NULL
             if (usart_instances[i]->module_callback != NULL) {
                 usart_instances[i]->module_callback();

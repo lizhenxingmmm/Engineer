@@ -18,11 +18,12 @@
 // module layer
 #include "remote.h"
 #include "miniPC_process.h"
+#include "VideoTransmitter.h"
 #include "message_center.h"
 
-static void RemoteControlSet(void);               // 遥控器控制量设置
-static RC_ctrl_t *rc_data;                        // 遥控器数据指针,初始化时返回
-
+static void RemoteControlSet(void); // 遥控器控制量设置
+static RC_ctrl_t *rc_data;          // 遥控器数据指针,初始化时返回
+static Video_ctrl_t *video_data;                  // 视觉数据指针,初始化时返回
 
 /**
  * @brief 机器人核心控制任务初始化,会被RobotInit()调用
@@ -31,7 +32,8 @@ static RC_ctrl_t *rc_data;                        // 遥控器数据指针,初�
 void RobotCMDInit(void)
 {
     // 初始化遥控器,使用串口3
-    rc_data = RemoteControlInit(&huart3); // 初始化遥控器,C板上使用USART3
+    rc_data    = RemoteControlInit(&huart3);           // 初始化遥控器,C板上使用USART3
+    video_data = VideoTransmitterControlInit(&huart6); // 初始化图传链路
 
     // 此处初始化与视觉的通信
 }
@@ -39,7 +41,6 @@ void RobotCMDInit(void)
 /* 机器人核心控制任务,200Hz频率运行(必须高于视觉发送频率) */
 void RobotCMDTask(void)
 {
-
 }
 
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
@@ -49,6 +50,5 @@ void RobotCMDTask(void)
  */
 static void RemoteControlSet(void)
 {
-
 }
 #endif

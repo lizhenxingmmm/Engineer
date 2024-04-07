@@ -2,6 +2,7 @@
 #include "roboTask.h"
 #include "robot_def.h"
 #include "robot_cmd.h"
+#include "arm.h"
 #include "test.h"
 
 #include "bsp_init.h"
@@ -26,9 +27,11 @@ void RobotInit(void)
     BSPInit();
     // 应用层初始化
     RobotCMDInit();
+    // 机械臂初始化
+    ArmInit();
 
     // 测试代码
-    TESTInit();
+    // TESTInit();
 
     // rtos创建任务
     OSTaskInit();
@@ -45,7 +48,8 @@ void RobotTask()
     // 应用层任务
     RobotCMDTask();
     // 测试代码
-    TESTTask();
+    ARMTask();
+    // TESTTask();
 }
 
 /*  下面为测试代码,可忽略    */

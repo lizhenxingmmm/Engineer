@@ -6,13 +6,14 @@
 #include "dmmotor.h"
 
 static DM_MotorInstance *dm_motor_test;
+static uint8_t is_init;
 void TESTInit(void)
 {
     // 测试代码初始化
     Motor_Init_Config_s motor_config = {
         .can_init_config = {
             .can_handle = &hcan1,
-            .rx_id      = 0x01, // Master ID
+            .rx_id      = 0x05, // Master ID
             .tx_id      = 2,    // MIT模式下为id，速度位置模式为0x100 + id
         },
         .controller_param_init_config = {
@@ -40,11 +41,17 @@ void TESTInit(void)
         .control_type = MOTOR_CONTROL_POSITION_AND_SPEED,
     };
     dm_motor_test = DMMotorInit(&motor_config);
-    DMMotorControlInit();
+
 }
 
 void TESTTask(void)
 {
-    DMMotorSetRef(dm_motor_test, 5);
-    DMMotorSetSpeedRef(dm_motor_test, 0.5);
+    if (!is_init) {
+        DMMotorControlInit();
+        DMMotorSetRef(dm_motor_test, dm_motor_test->measure.position);
+        DMMotorSetSpeedRef(dm_motor_test, 0.5);
+        is_init = 1;
+    }
+    // DMMotorSetRef(dm_motor_test, 5);
+    // DMMotorSetSpeedRef(dm_motor_test, 0.5);
 }

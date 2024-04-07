@@ -81,6 +81,16 @@ static void DMMotorConfigModel(DM_MotorInstance *motor, CAN_Init_Config_s *confi
         default:
             break;
     }
+
+    // 检查是否发生id冲突
+    for (size_t i = 0; i < idx; i++) {
+        if (dm_motor_instance[i]->motor_can_instace->can_handle == config->can_handle &&
+            dm_motor_instance[i]->motor_can_instace->tx_id == config->tx_id) {
+            uint16_t can_bus __attribute__((unused)) = config->can_handle == &hcan1 ? 1 : 2;
+            while (1) // 当控制模式相同且ID相同时,死循环等待
+                ;     // 请检查can id是否冲突
+        }
+    }
 }
 
 DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
@@ -110,10 +120,13 @@ DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
     motor->motor_daemon = DaemonRegister(&conf);
 
     DMMotorEnable(motor);
-    DMMotorSetMode(DM_CMD_MOTOR_MODE, motor);
+    DMMotorSetMode(DM_CMD_MOTOR_MODE, motor); // 记得打开
+
     DWT_Delay(0.1);
+    // 失能，测量数据用
+    // DMMotorSetMode(DM_CMD_RESET_MODE, motor);
     // DMMotorCaliEncoder(motor);
-    // DWT_Delay(0.1);
+    DWT_Delay(0.1);
     dm_motor_instance[idx++] = motor;
     return motor;
 }
@@ -186,7 +199,7 @@ void DMMotorTask(void const *argument)
     // uint16_t tmp;
     DMMotor_Send_s motor_send_mailbox;
     while (1) {
-        pid_ref = motor->pid_ref;
+        pid_ref   = motor->pid_ref;
         speed_ref = motor->speed_ref;
 
         if (setting->motor_reverse_flag == MOTOR_DIRECTION_REVERSE)
