@@ -30,8 +30,10 @@ typedef struct
 
 typedef struct
 {
-    uint16_t position_des;
-    uint16_t velocity_des;
+    uint16_t position_mit; // MIT模式下的位置值
+    uint16_t velocity_mit; // MIT模式下的速度值
+    float position_sp; // 位置速度模式下的位置值
+    float velocity_sp; // 位置速度模式下的速度值
     uint16_t torque_des;
     uint16_t Kp;
     uint16_t Kd;
@@ -49,6 +51,8 @@ typedef struct
     float *speed_feedforward_ptr;
     float *current_feedforward_ptr;
     float pid_ref;
+    float speed_ref; // 位置速度模式下的速度参考
+    Motor_Controll_Type_e control_type;
     Motor_Working_Type_e stop_flag;
     CAN_Instance *motor_can_instace;
     Daemon_Instance *motor_daemon;
@@ -65,6 +69,7 @@ typedef enum {
 DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config);
 
 void DMMotorSetRef(DM_MotorInstance *motor, float ref);
+void DMMotorSetSpeedRef(DM_MotorInstance *motor, float ref);
 
 void DMMotorOuterLoop(DM_MotorInstance *motor, Closeloop_Type_e closeloop_type);
 

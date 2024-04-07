@@ -26,6 +26,8 @@ void RobotInit(void)
     BSPInit();
     // 应用层初始化
     RobotCMDInit();
+
+    // 测试代码
     TESTInit();
 
     // rtos创建任务
@@ -42,6 +44,8 @@ void RobotTask()
 {
     // 应用层任务
     RobotCMDTask();
+    // 测试代码
+    TESTTask();
 }
 
 /*  下面为测试代码,可忽略    */

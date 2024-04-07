@@ -64,6 +64,14 @@ typedef enum {
     MOTOR_ENALBED = 1,
 } Motor_Working_Type_e;
 
+/* 电机工作类型（达妙电机专用） */
+typedef enum {
+    MOTOR_CONTROL_MIT = 1,
+    MOTOR_CONTROL_POSITION_AND_SPEED,
+    MOTOR_CONTROL_SPEED,
+    MOTOR_CONTROL_E_MIT,
+} Motor_Controll_Type_e;
+
 /* 电机控制设置,包括闭环类型,反转标志和反馈来源 */
 typedef struct
 {
@@ -127,6 +135,7 @@ typedef struct
     Motor_Controller_Init_s controller_param_init_config;
     Motor_Control_Setting_s controller_setting_init_config;
     Motor_Type_e motor_type;
+    Motor_Controll_Type_e control_type; // 电机工作类型,达妙电机专用
     CAN_Init_Config_s can_init_config;
 } Motor_Init_Config_s;
 
