@@ -1,0 +1,127 @@
+{
+  "name": "Engineer",
+  "type": "ARM",
+  "dependenceList": [],
+  "srcDirs": [
+    ".eide/deps",
+    "Drivers",
+    "Inc",
+    "Middlewares",
+    "Src",
+    "Bsp",
+    "Module",
+    "Application"
+  ],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": [
+      {
+        "name": "Start",
+        "files": [
+          {
+            "path": "Middlewares/ST/ARM/DSP/Lib/libarm_cortexM4lf_math.a"
+          },
+          {
+            "path": "startup_stm32f407xx.s"
+          }
+        ],
+        "folders": []
+      }
+    ]
+  },
+  "outDir": "build",
+  "deviceName": null,
+  "packDir": null,
+  "miscInfo": {
+    "uid": "d7c2cde9c406db887521a508b88ac1c1"
+  },
+  "targets": {
+    "Debug": {
+      "excludeList": [],
+      "toolchain": "GCC",
+      "compileConfig": {
+        "cpuType": "Cortex-M4",
+        "floatingPointHardware": "single",
+        "scatterFilePath": "STM32F407IGHx_FLASH.ld",
+        "useCustomScatterFile": true,
+        "storageLayout": {
+          "RAM": [],
+          "ROM": []
+        },
+        "options": "null"
+      },
+      "uploader": "OpenOCD",
+      "uploadConfig": {
+        "bin": "",
+        "target": "stm32f4x",
+        "interface": "stlink-v2",
+        "baseAddr": "0x08000000"
+      },
+      "uploadConfigMap": {
+        "JLink": {
+          "bin": "",
+          "baseAddr": "",
+          "cpuInfo": {
+            "vendor": "null",
+            "cpuName": "null"
+          },
+          "proType": 1,
+          "speed": 8000,
+          "otherCmds": ""
+        }
+      },
+      "custom_dep": {
+        "name": "default",
+        "incList": [
+          ".eide/deps",
+          "Inc",
+          "Drivers/STM32F4xx_HAL_Driver/Inc",
+          "Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
+          "Middlewares/Third_Party/FreeRTOS/Source/include",
+          "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS",
+          "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
+          "Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
+          "Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
+          "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
+          "Drivers/CMSIS/Include",
+          "Middlewares/ST/ARM/DSP/Inc",
+          "Bsp/CAN",
+          "Bsp/DWT",
+          "Bsp/GPIO",
+          "Bsp/PWM",
+          "Bsp/USART",
+          "Bsp/USB",
+          "Module/algorithm",
+          "Module/C_comm",
+          "Module/daemon",
+          "Module/imu",
+          "Module/key",
+          "Module/message_center",
+          "Module/miniPC",
+          "Module/motor",
+          "Module/referee",
+          "Module/remote",
+          "Module/VideoTransmitter",
+          "Application",
+          "Application/cmd",
+          "Bsp",
+          "Module",
+          "Module/motor/DJImotor",
+          "Module/motor/DMmotor",
+          "Application/test"
+        ],
+        "libList": [
+          "Middlewares/ST/ARM/DSP/Lib"
+        ],
+        "sourceDirList": [],
+        "defineList": [
+          "USE_HAL_DRIVER",
+          "STM32F407xx",
+          "ARM_MATH_CM4"
+        ]
+      }
+    }
+  },
+  "version": "3.3"
+}
