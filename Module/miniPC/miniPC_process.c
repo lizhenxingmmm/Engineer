@@ -9,7 +9,7 @@ static uint8_t *vis_recv_buff __attribute__((unused));
 static Daemon_Instance *vision_daemon_instance;
 // 全局变量区
 extern uint16_t CRC_INIT;
-float yaw_send = 0;
+float yaw_send      = 0;
 uint8_t is_tracking = 0;
 /**
  * @brief 处理视觉传入的数据
@@ -41,19 +41,18 @@ static void RecvProcess(Vision_Recv_s *recv, uint8_t *rx_buff)
  * @brief 回调函数，确认帧头后用于解析视觉数据
  *
  */
-static void DecodeVision()
+static void DecodeVision(uint16_t var)
 {
+    UNUSED(var);                          // 仅为了消除警告
     DaemonReload(vision_daemon_instance); // 喂狗
 #ifdef VISION_USE_VCP
-    if (vis_recv_buff[0] == vision_instance->recv_data->header)
-    {
+    if (vis_recv_buff[0] == vision_instance->recv_data->header) {
         // 读取视觉数据
         RecvProcess(vision_instance->recv_data, vis_recv_buff);
     }
 #endif
 #ifdef VISION_USE_UART
-    if (vision_instance->usart->recv_buff[0] == vision_instance->recv_data->header)
-    {
+    if (vision_instance->usart->recv_buff[0] == vision_instance->recv_data->header) {
         // 读取视觉数据
         RecvProcess(vision_instance->recv_data, vision_instance->usart->recv_buff);
     }
@@ -83,9 +82,9 @@ static void VisionOfflineCallback(void *id)
  */
 void VisionSetAltitude(float yaw, float pitch, float roll)
 {
-    vision_instance->send_data->yaw = yaw;
+    vision_instance->send_data->yaw   = yaw;
     vision_instance->send_data->pitch = pitch;
-    vision_instance->send_data->roll = roll;
+    vision_instance->send_data->roll  = roll;
 }
 
 /**
@@ -141,11 +140,11 @@ Vision_Send_s *VisionSendRegister(Vision_Send_Init_Config_s *send_config)
     Vision_Send_s *send_data = (Vision_Send_s *)malloc(sizeof(Vision_Send_s));
     memset(send_data, 0, sizeof(Vision_Send_s));
 
-    send_data->header = send_config->header;
-    send_data->detect_color = send_config->detect_color;
+    send_data->header        = send_config->header;
+    send_data->detect_color  = send_config->detect_color;
     send_data->reset_tracker = send_config->reset_tracker;
-    send_data->is_shoot = send_config->is_shoot;
-    send_data->tail = send_config->tail;
+    send_data->is_shoot      = send_config->is_shoot;
+    send_data->tail          = send_config->tail;
     return send_data;
 }
 
@@ -164,13 +163,13 @@ Vision_Recv_s *VisionInit(Vision_Init_Config_s *init_config)
 
     init_config->usart_config.module_callback = DecodeVision;
 
-    vision_instance->usart = USARTRegister(&init_config->usart_config);
+    vision_instance->usart     = USARTRegister(&init_config->usart_config);
     vision_instance->recv_data = VisionRecvRegister(&init_config->recv_config);
     vision_instance->send_data = VisionSendRegister(&init_config->send_config);
     // 为master process注册daemon,用于判断视觉通信是否离线
     Daemon_Init_Config_s daemon_conf = {
-        .callback = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收
-        .owner_id = NULL,
+        .callback     = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收
+        .owner_id     = NULL,
         .reload_count = 5, // 50ms
     };
     vision_daemon_instance = DaemonRegister(&daemon_conf);
@@ -208,14 +207,14 @@ Vision_Recv_s *VisionInit(Vision_Init_Config_s *init_config)
     vision_instance = (Vision_Instance *)malloc(sizeof(Vision_Instance));
     memset(vision_instance, 0, sizeof(Vision_Instance));
 
-    USB_Init_Config_s conf = {.rx_cbk = DecodeVision};
-    vis_recv_buff = USBInit(conf);
+    USB_Init_Config_s conf     = {.rx_cbk = DecodeVision};
+    vis_recv_buff              = USBInit(conf);
     vision_instance->recv_data = VisionRecvRegister(&init_config->recv_config);
     vision_instance->send_data = VisionSendRegister(&init_config->send_config);
     // 为master process注册daemon,用于判断视觉通信是否离线
     Daemon_Init_Config_s daemon_conf = {
-        .callback = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收
-        .owner_id = NULL,
+        .callback     = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收
+        .owner_id     = NULL,
         .reload_count = 5, // 50ms
     };
     vision_daemon_instance = DaemonRegister(&daemon_conf);

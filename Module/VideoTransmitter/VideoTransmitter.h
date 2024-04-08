@@ -21,14 +21,21 @@
 #include "referee_protocol.h"
 
 #pragma pack(1)
+typedef struct
+{
+    float maximal_arm_target; // 大臂的目标值
+    float minimal_arm_target; // 小臂的目标值
+    float finesse_target;     // 手腕的目标值
+    float pitch_arm_target;   // pitch的目标值
+} Custom_contorl_t;
 
 typedef struct
 {
-
-    xFrameHeader FrameHeader; // 接收到的帧头信息
-    uint16_t CmdID;           // 命令码
+    xFrameHeader FrameHeader;        // 接收到的帧头信息
+    uint16_t CmdID;                  // 命令码
     custom_robot_data_t custom_data; // 自定义数据
-    remote_control_t key_data; // 遥控器数据
+    Custom_contorl_t cus;            // 解算后的自定义数据
+    remote_control_t key_data;       // 遥控器数据
 
     Key_t key[3]; // 改为位域后的键盘索引,空间减少8倍,速度增加16~倍
 

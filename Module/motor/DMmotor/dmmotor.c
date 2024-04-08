@@ -98,6 +98,9 @@ DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
     DM_MotorInstance *motor = (DM_MotorInstance *)malloc(sizeof(DM_MotorInstance));
     memset(motor, 0, sizeof(DM_MotorInstance));
 
+    if (!idx)
+        DWT_Delay(1);
+
     motor->motor_settings = config->controller_setting_init_config;
     PIDInit(&motor->current_PID, &config->controller_param_init_config.current_PID);
     PIDInit(&motor->speed_PID, &config->controller_param_init_config.speed_PID);

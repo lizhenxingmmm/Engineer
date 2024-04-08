@@ -13,18 +13,19 @@
 #define __ROBOT_DEF_H__
 
 #include "stdint.h"
+#include "ins_task.h"
 
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // ! 单板控制整车，beta选项，建议别选上
-#define CHASSIS_BOARD // 底盘板，注意底盘板还控制了云台的YAW轴
-// #define GIMBAL_BOARD // 云台板
+// #define CHASSIS_BOARD // 底盘板
+#define ARM_BOARD // 工程手臂板
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 底盘参数
-#define CHASSIS_OMNI_WHEEL // 是否为全向轮底盘
-// #define CHASSIS_MCNAMEE_WHEEL // 是否为麦克纳姆轮底盘
+// #define CHASSIS_OMNI_WHEEL // 是否为全向轮底盘
+#define CHASSIS_MCNAMEE_WHEEL // 是否为麦克纳姆轮底盘
 
-#define VISION_USE_VCP // 是否使用虚拟串口
+#define VISION_USE_VCP        // 是否使用虚拟串口
 // #define VISION_USE_UART // 是否使用硬件串口
 
 // #define VIDEO_LINKK // 是否有图传链路
@@ -32,8 +33,8 @@
 
 // 检查是否出现主控板定义冲突,只允许一个开发板定义存在,否则编译会自动报错
 #if (defined(ONE_BOARD) && defined(CHASSIS_BOARD)) || \
-    (defined(ONE_BOARD) && defined(GIMBAL_BOARD)) ||  \
-    (defined(CHASSIS_BOARD) && defined(GIMBAL_BOARD))
+    (defined(ONE_BOARD) && defined(ARM_BOARD)) ||     \
+    (defined(CHASSIS_BOARD) && defined(ARM_BOARD))
 #error Conflict board definition! You can only define one board type.
 #endif
 
@@ -67,10 +68,10 @@ typedef enum {
  *
  */
 typedef enum {
-    CHASSIS_ZERO_FORCE = 0,    // 电流零输入
-    CHASSIS_ROTATE,            // 小陀螺模式
-    CHASSIS_NO_FOLLOW,         // 不跟随，允许全向平移
-    CHASSIS_FOLLOW_GIMBAL_YAW, // 跟随模式，底盘叠加角度环控制
+    CHASSIS_ZERO_FORCE = 0, // 电流零输入
+    CHASSIS_FAST,           // 底盘转速快
+    CHASSIS_MEDIUM,         // 底盘转速中等
+    CHASSIS_SLOW,           // 底盘转速慢
 } chassis_mode_e;
 
 typedef enum {
@@ -90,17 +91,38 @@ typedef enum {
 } lid_mode_e;
 
 typedef enum {
-    LOAD_STOP = 0,  // 停止发射
-    LOAD_REVERSE,   // 反转
-    LOAD_1_BULLET,  // 单发
-    LOAD_3_BULLET,  // 三发
-    LOAD_BURSTFIRE, // 连发
+    LOAD_STOP = 0, // 停止发射
+    LOAD_REVERSE,  // 反转
+    LOAD_SLOW,     // 慢速
+    LOAD_MEDIUM,   // 中速
+    LOAD_FAST,     // 快速
 } loader_mode_e;
+
+typedef enum {
+    BULLET_SPEED_NONE = 0,
+    BIG_AMU_10        = 10,
+    SMALL_AMU_15      = 15,
+    BIG_AMU_16        = 16,
+    SMALL_AMU_18      = 18,
+    SMALL_AMU_30      = 30,
+} Bullet_Speed_e;
 
 typedef enum {
     FRICTION_OFF = 0, // 摩擦轮关闭
     FRICTION_ON,      // 摩擦轮开启
 } friction_mode_e;
+
+// 功率限制,从裁判系统获取,是否有必要保留?
+typedef struct
+{ // 功率控制
+    float chassis_power_mx;
+} Chassis_Power_Data_s;
+
+// UI模式设置
+typedef enum {
+    UI_KEEP = 0,
+    UI_REFRESH,
+} ui_mode_e;
 
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
 /**
@@ -121,6 +143,15 @@ typedef struct
     //  ...
 
 } Chassis_Ctrl_Cmd_s;
+
+// cmd发布的机械臂控制数据,由arm订阅
+typedef struct
+{
+    float maximal_arm;
+    float minimal_arm;
+    float finesse;
+    float pitch_arm;
+} Arm_Ctrl_Cmd_s;
 
 // cmd发布的云台控制数据,由gimbal订阅
 typedef struct
@@ -161,26 +192,38 @@ typedef struct
     float shoot_rate; // 连续发射的射频,unit per s,发/秒
 } Shoot_Ctrl_Cmd_s;
 
+/* ----------------gimbal/shoot/chassis发布的反馈数据----------------*/
+/**
+ * @brief 由cmd订阅,其他应用也可以根据需要获取.
+ *
+ */
+
 typedef struct
 {
-    // code to go here
+#if defined(CHASSIS_BOARD) || defined(GIMBAL_BOARD) // 非单板的时候底盘还将imu数据回传(若有必要)
+    // attitude_t chassis_imu_data;
+#endif
+    // 后续增加底盘的真实速度
+    // float real_vx;
+    // float real_vy;
+    // float real_wz;
+
+    uint8_t rest_heat;           // 剩余枪口热量
+    Bullet_Speed_e bullet_speed; // 弹速限制
+
+} Chassis_Upload_Data_s;
+
+// 机械臂反馈数据
+typedef struct
+{
     // ...
-} Shoot_Upload_Data_s;
+} Arm_Upload_Data_s;
 
-// 上C -> 下C
 typedef struct
 {
-    Gimbal_Ctrl_Yaw_Cmd_s gimbal_cmd; // 视觉反馈的云台控制命令
-    float yaw;                        // 云台yaw角度
-    float speed;                      // 云台yaw轴速度
-} Up_To_Down_Data_s;
-
-// 下C -> 上C
-typedef struct
-{
-    Gimbal_Ctrl_Pitch_Cmd_s gimbal_cmd; // 底盘反馈的云台控制命令，用于控制Pitch轴
-    // 发射任务命令
-} Down_To_Up_Data_s;
+    attitude_t gimbal_imu_data;
+    uint16_t yaw_motor_single_round_angle;
+} Gimbal_Upload_Data_s;
 
 #pragma pack() // 取消压缩
 #endif

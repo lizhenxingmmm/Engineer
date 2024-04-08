@@ -47,6 +47,10 @@ static void VideoDataContorl()
     video_ctrl[LAST] = video_ctrl[TEMP];
 }
 
+// static CustomDataDecode()
+// {
+// }
+
 /**
  * @brief 图传数据解析函数
  *
@@ -74,6 +78,7 @@ static void VideoRead(uint8_t *buff)
                 switch (video_ctrl[TEMP].CmdID) {
                     case ID_custom_robot_data: // 自定义数据
                         memcpy(&video_ctrl[TEMP].custom_data, (buff + DATA_Offset), LEN_custom_robot_data);
+                        memcpy(&video_ctrl[TEMP].cus, &video_ctrl[TEMP].custom_data, 16);
                         break;
                     case ID_remote_control_data: // 图传链路键鼠数据
                         memcpy(&video_ctrl[TEMP].key_data, (buff + DATA_Offset), LEN_remote_control_data);

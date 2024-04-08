@@ -1,5 +1,17 @@
 #include "arm.h"
+#include "robot_def.h"
+
 #include "dmmotor.h"
+#include "message_center.h"
+#include "user_lib.h"
+// 大臂 -0.19 小臂 -0.79就寄啦？
+
+// 图传链路 大臂零位maximal_arm -0.96 小臂零位minimal_arm 0.43 手腕零位 finesse 0.03 pitch_arm 零位 0.66
+static Publisher_t *arm_pub;  // 用于发布底盘的数据
+static Subscriber_t *arm_sub; // 用于订阅底盘的控制命令
+
+static Arm_Ctrl_Cmd_s arm_cmd_recv;         // 发送给底盘的控制命令
+static Arm_Upload_Data_s arm_feedback_data; // 从底盘接收的数据
 
 static DM_MotorInstance *maximal_arm, *minimal_arm, *finesse, *pitch_arm;
 static int8_t is_init;
@@ -18,6 +30,9 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
 
     DMMotorSetRef(pitch_arm, pitch_arm->measure.position);
     DMMotorSetSpeedRef(pitch_arm, 0.3);
+
+    arm_sub = SubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
+    arm_pub = PubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
 }
 
 void ArmInit(void)
@@ -56,16 +71,19 @@ void ARMTask(void)
         ArmDMInit();
         is_init = 1;
     }
+    SubGetMessage(arm_sub, &arm_cmd_recv);
     // 机械臂控制任务
-    // DMMotorSetRef(maximal_arm, -0.4); // MIN -1.5,MAX 0.4
-    // DMMotorSetSpeedRef(maximal_arm, 0.5);
+    VAL_LIMIT(arm_cmd_recv.maximal_arm, -1.0f, 0.74f);
+    DMMotorSetRef(maximal_arm, arm_cmd_recv.maximal_arm); // MIN -1.0,MAX 0.75
 
-    // DMMotorSetRef(minimal_arm, 0.5); // MIN -2.4,MAX 2.7
-    // DMMotorSetSpeedRef(minimal_arm, 0.5);
+    VAL_LIMIT(arm_cmd_recv.minimal_arm, -2.0f, 2.7f);
+    DMMotorSetRef(minimal_arm, arm_cmd_recv.minimal_arm); // MIN -2.0,MAX 2.7
 
-    // DMMotorSetRef(finesse, 0); // MIN -2,MAX 3.3
-    // DMMotorSetSpeedRef(finesse, 0.5);
+    VAL_LIMIT(arm_cmd_recv.finesse, -1.6f, 1.9f);
+    DMMotorSetRef(finesse, arm_cmd_recv.finesse); // MIN -1.6,MAX 1.9
 
-    // DMMotorSetRef(pitch_arm, 0.5); // MIN -0.8,MAX 0.6
-    // DMMotorSetSpeedRef(pitch_arm, 0.5);
+    VAL_LIMIT(arm_cmd_recv.pitch_arm, -0.8f, 1.0f);
+    DMMotorSetRef(pitch_arm, arm_cmd_recv.pitch_arm); // MIN -0.8,MAX 1.0
+
+    PubPushMessage(arm_pub, &arm_feedback_data);
 }

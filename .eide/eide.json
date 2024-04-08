@@ -110,7 +110,8 @@
           "Module/motor/DJImotor",
           "Module/motor/DMmotor",
           "Application/test",
-          "Application/arm"
+          "Application/arm",
+          "Application/chassis"
         ],
         "libList": [
           "Middlewares/ST/ARM/DSP/Lib"
