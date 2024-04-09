@@ -4,6 +4,7 @@
 #include "string.h"
 #include "crc_ref.h"
 #include "referee_protocol.h"
+#include "robot_def.h"
 
 #define RE_RX_BUFFER_SIZE 255u // 裁判系统接收缓冲区大小
 
@@ -73,6 +74,9 @@ static void VideoRead(uint8_t *buff)
             if (Verify_CRC16_Check_Sum(buff, judge_length) == TRUE) {
                 // 2个8位拼成16位int
                 video_ctrl[TEMP].CmdID = (buff[6] << 8 | buff[5]);
+#ifdef ARM_BOARD // Chassis板不需要发送数据
+                VideoDataSend(&huart1);
+#endif
                 // 解析数据命令码,将数据拷贝到相应结构体中(注意拷贝数据的长度)
                 // 第8个字节开始才是数据 data=7
                 switch (video_ctrl[TEMP].CmdID) {
@@ -133,4 +137,11 @@ Video_ctrl_t *VideoTransmitterControlInit(UART_HandleTypeDef *video_usart_handle
 
     is_init = 1;
     return video_ctrl;
+}
+
+void VideoDataSend(UART_HandleTypeDef *_handle)
+{
+    uint8_t send_packed[255]; // 防止数据中途改变
+    memcpy(send_packed, video_usart_instance->recv_buff, 255);
+    HAL_UART_Transmit_DMA(_handle, send_packed, 255);
 }

@@ -4,6 +4,7 @@
 #include "robot_cmd.h"
 #include "arm.h"
 #include "test.h"
+#include "chassis.h"
 
 #include "bsp_init.h"
 
@@ -27,8 +28,14 @@ void RobotInit(void)
     BSPInit();
     // 应用层初始化
     RobotCMDInit();
-    // 机械臂初始化
+// 机械臂初始化
+#ifdef ARM_BOARD
     ArmInit();
+#endif // ARM_BOARD
+    // 底盘初始化
+#ifdef CHASSIS_BOARD
+    ChassisInit();
+#endif // CHASSIS_BOARD
 
     // 测试代码
     // TESTInit();
@@ -47,9 +54,14 @@ void RobotTask()
 {
     // 应用层任务
     RobotCMDTask();
-    // 测试代码
+    // 机械臂任务
+#ifdef ARM_BOARD
     ARMTask();
-    // TESTTask();
+#endif // ARM_BOARD
+    // 底盘任务
+#ifdef CHASSIS_BOARD
+    ChassisTask();
+#endif // CHASSIS_BOARD
 }
 
 /*  下面为测试代码,可忽略    */

@@ -46,4 +46,5 @@ typedef struct
 
 Video_ctrl_t *VideoTransmitterControlInit(UART_HandleTypeDef *video_usart_handle);
 
+void VideoDataSend(UART_HandleTypeDef *_handle);
 #endif // !VIDEOTRANSMITTER_H

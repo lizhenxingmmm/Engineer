@@ -124,6 +124,14 @@ typedef enum {
     UI_REFRESH,
 } ui_mode_e;
 
+// 机械臂模式设置
+typedef enum {
+    ARM_ZERO_FORCE = 0, // 电流零输入
+    ARM_HUM_CONTORL,    // 自定义控制器控制
+    ARM_AUTO_CONTROL,   // 自动控制
+    ARM_KEY_CONTROL,    // 键盘控制
+} arm_mode_e;
+
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
 /**
  * @brief 对于双板情况,pc在云台,遥控器和裁判系统在底盘
@@ -151,6 +159,7 @@ typedef struct
     float minimal_arm;
     float finesse;
     float pitch_arm;
+    arm_mode_e arm_mode;
 } Arm_Ctrl_Cmd_s;
 
 // cmd发布的云台控制数据,由gimbal订阅
