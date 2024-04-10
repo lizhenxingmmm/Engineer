@@ -183,10 +183,11 @@ static void DMMotorMITContoroll(DM_MotorInstance *motor, float ref, DMMotor_Send
 
 static void DMMotorPositonSpeedContoroll(DM_MotorInstance *motor, float pos_ref, float speed_ref, DMMotor_Send_s *send)
 {
-    send->velocity_sp = 0.5;
+
     if (motor->stop_flag == MOTOR_STOP)
         send->velocity_sp = 0;
-
+    else
+        send->velocity_sp = 0.5;
     send->position_sp = pos_ref;
     memcpy(motor->motor_can_instace->tx_buff, &send->position_sp, 4);
     memcpy(motor->motor_can_instace->tx_buff + 4, &send->velocity_sp, 4);

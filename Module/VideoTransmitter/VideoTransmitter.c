@@ -47,10 +47,14 @@ static void VideoDataContorl()
     }
     video_ctrl[LAST] = video_ctrl[TEMP];
 }
-
-// static CustomDataDecode()
-// {
-// }
+#ifdef ARM_BOARD // Chassis板不需要发送数据
+static void VideoDataSend(UART_HandleTypeDef *_handle)
+{
+    uint8_t send_packed[255]; // 防止数据中途改变
+    memcpy(send_packed, video_usart_instance->recv_buff, 255);
+    HAL_UART_Transmit_DMA(_handle, send_packed, 255);
+}
+#endif
 
 /**
  * @brief 图传数据解析函数
@@ -137,11 +141,4 @@ Video_ctrl_t *VideoTransmitterControlInit(UART_HandleTypeDef *video_usart_handle
 
     is_init = 1;
     return video_ctrl;
-}
-
-void VideoDataSend(UART_HandleTypeDef *_handle)
-{
-    uint8_t send_packed[255]; // 防止数据中途改变
-    memcpy(send_packed, video_usart_instance->recv_buff, 255);
-    HAL_UART_Transmit_DMA(_handle, send_packed, 255);
 }

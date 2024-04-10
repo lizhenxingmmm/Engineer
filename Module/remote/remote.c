@@ -71,6 +71,7 @@
 #include "memory.h"
 #include "stdlib.h"
 #include "daemon.h"
+#include "robot_def.h"
 
 #define REMOTE_CONTROL_FRAME_SIZE 18u // 遥控器接收的buffer大小
 
@@ -151,15 +152,32 @@ static void sbus_to_rc(const uint8_t *sbus_buf)
 
     memcpy(&rc_ctrl[LAST], &rc_ctrl[TEMP], sizeof(RC_ctrl_t)); // 保存上一次的数据,用于按键持续按下和切换的判断
 }
-
+#ifdef CHASSIS_BOARD
+static void RemoteDateSend(UART_HandleTypeDef *_handle)
+{
+    uint8_t send_to_arm[REMOTE_CONTROL_FRAME_SIZE + 2]; // 防止数据中途改变
+    send_to_arm[0]  = 0xA5u;
+    send_to_arm[19] = 0XAAu; // 用于校验
+    memcpy(send_to_arm + 1, rc_usart_instance->recv_buff, REMOTE_CONTROL_FRAME_SIZE);
+    HAL_UART_Transmit(_handle, send_to_arm, REMOTE_CONTROL_FRAME_SIZE + 2, 100);
+}
+#endif
 /**
  * @brief 对sbus_to_rc的简单封装,用于注册到bsp_usart的回调函数中
  *
  */
 static void RemoteControlRxCallback()
 {
-    DaemonReload(rc_daemon_instance);         // 先喂狗
+#ifdef CHASSIS_BOARD
+    RemoteDateSend(&huart1);
     sbus_to_rc(rc_usart_instance->recv_buff); // 进行协议解析
+#endif
+    DaemonReload(rc_daemon_instance); // 先喂狗
+#ifdef ARM_BOARD
+    if (rc_usart_instance->recv_buff[0] == 0XA5u &&
+        rc_usart_instance->recv_buff[REMOTE_CONTROL_FRAME_SIZE + 1] == 0XAAu) // 遥控器的帧头
+        sbus_to_rc(rc_usart_instance->recv_buff + 1);                         // 进行协议解析
+#endif
 }
 
 /**
@@ -180,7 +198,10 @@ RC_ctrl_t *RemoteControlInit(UART_HandleTypeDef *rc_usart_handle)
     conf.module_callback = RemoteControlRxCallback;
     conf.usart_handle    = rc_usart_handle;
     conf.recv_buff_size  = REMOTE_CONTROL_FRAME_SIZE;
-    rc_usart_instance    = USARTRegister(&conf);
+#ifdef ARM_BOARD
+    conf.recv_buff_size = REMOTE_CONTROL_FRAME_SIZE + 2;
+#endif //  ARM_BOARD
+    rc_usart_instance = USARTRegister(&conf);
 
     // 进行守护进程的注册,用于定时检查遥控器是否正常工作
     Daemon_Init_Config_s daemon_conf = {

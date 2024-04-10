@@ -2,6 +2,7 @@
 #include "robot_def.h"
 
 #include "dmmotor.h"
+#include "DJI_motor.h"
 #include "message_center.h"
 #include "user_lib.h"
 // 大臂 -0.19 小臂 -0.79就寄啦？
@@ -14,22 +15,24 @@ static Arm_Ctrl_Cmd_s arm_cmd_recv;         // 发送给底盘的控制命令
 static Arm_Upload_Data_s arm_feedback_data; // 从底盘接收的数据
 
 static DM_MotorInstance *maximal_arm, *minimal_arm, *finesse, *pitch_arm;
+static DJIMotor_Instance *lift, *roll;
 static int8_t is_init;
+static float roll_init_angle;
 
 static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会回到原位，当然可以重新置零，但是工程的机械臂要限位？
 {
     DMMotorControlInit();
     DMMotorSetRef(maximal_arm, maximal_arm->measure.position);
-    DMMotorSetSpeedRef(maximal_arm, 0.3);
+    DMMotorSetSpeedRef(maximal_arm, 0.5);
 
     DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
-    DMMotorSetSpeedRef(minimal_arm, 0.3);
+    DMMotorSetSpeedRef(minimal_arm, 0.5);
 
     DMMotorSetRef(finesse, finesse->measure.position);
-    DMMotorSetSpeedRef(finesse, 0.3);
+    DMMotorSetSpeedRef(finesse, 0.5);
 
     DMMotorSetRef(pitch_arm, pitch_arm->measure.position);
-    DMMotorSetSpeedRef(pitch_arm, 0.3);
+    DMMotorSetSpeedRef(pitch_arm, 0.5);
 
     arm_sub = SubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_pub = PubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
@@ -62,6 +65,88 @@ void ArmInit(void)
     motor_config.can_init_config.rx_id = 0x04;
     motor_config.can_init_config.tx_id = 2;
     pitch_arm                          = DMMotorInit(&motor_config);
+
+    Motor_Init_Config_s lift_config = {
+        .can_init_config = {
+            .can_handle = &hcan1,
+            .tx_id      = 1,
+        },
+        .controller_param_init_config = {
+            .angle_PID = {
+                .Kp                = 300,
+                .Ki                = 0,
+                .Kd                = 20,
+                .Improve           = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement | PID_DerivativeFilter | PID_ErrorHandle,
+                .IntegralLimit     = 10000,
+                .MaxOut            = 15000,
+                .Derivative_LPF_RC = 0.01,
+            },
+            .speed_PID = {
+                .Kp            = 7, // 10
+                .Ki            = 1, // 1
+                .Kd            = 0,
+                .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
+                .IntegralLimit = 10000,
+                .MaxOut        = 15000,
+            },
+            .current_PID = {
+                .Kp            = 0.7,  // 0.7
+                .Ki            = 0.02, // 0.1
+                .Kd            = 0,
+                .Improve       = PID_Integral_Limit,
+                .IntegralLimit = 10000,
+                .MaxOut        = 15000,
+            },
+        },
+        .controller_setting_init_config = {
+            .angle_feedback_source = MOTOR_FEED, .speed_feedback_source = MOTOR_FEED,
+            .outer_loop_type    = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转
+            .close_loop_type    = CURRENT_LOOP | SPEED_LOOP | ANGLE_LOOP,
+            .motor_reverse_flag = MOTOR_DIRECTION_REVERSE, // 注意方向设置为拨盘的拨出的击发方向
+        },
+        .motor_type = M3508};
+    lift = DJIMotorInit(&lift_config);
+
+    Motor_Init_Config_s roll_config = {
+        .can_init_config = {
+            .can_handle = &hcan2,
+            .tx_id      = 1,
+        },
+        .controller_param_init_config = {
+            .angle_PID = {
+                .Kp                = 10,
+                .Ki                = 0,
+                .Kd                = 0,
+                .Improve           = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement | PID_DerivativeFilter | PID_ErrorHandle,
+                .IntegralLimit     = 10000,
+                .MaxOut            = 15000,
+                .Derivative_LPF_RC = 0.01,
+            },
+            .speed_PID = {
+                .Kp            = 2, // 10
+                .Ki            = 0.1, // 1
+                .Kd            = 0.002,
+                .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
+                .IntegralLimit = 10000,
+                .MaxOut        = 15000,
+            },
+            .current_PID = {
+                .Kp            = 1.5,  // 0.7
+                .Ki            = 0.02, // 0.1
+                .Kd            = 0,
+                .Improve       = PID_Integral_Limit,
+                .IntegralLimit = 10000,
+                .MaxOut        = 15000,
+            },
+        },
+        .controller_setting_init_config = {
+            .angle_feedback_source = MOTOR_FEED, .speed_feedback_source = MOTOR_FEED,
+            .outer_loop_type    = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转
+            .close_loop_type    = CURRENT_LOOP | SPEED_LOOP | ANGLE_LOOP,
+            .motor_reverse_flag = MOTOR_DIRECTION_REVERSE, // 注意方向设置为拨盘的拨出的击发方向
+        },
+        .motor_type = M2006};
+    roll = DJIMotorInit(&roll_config);
 }
 
 void ARMTask(void)
@@ -69,21 +154,51 @@ void ARMTask(void)
     if (!is_init) {
         DMMotorControlInit();
         ArmDMInit();
-        is_init = 1;
+        roll_init_angle = roll->measure.total_angle; // min = -3460 - 165 max =4973 - 165
+        is_init         = 1;
     }
     SubGetMessage(arm_sub, &arm_cmd_recv);
     // 机械臂控制任务
-    VAL_LIMIT(arm_cmd_recv.maximal_arm, -1.0f, 0.74f);
+    if (arm_cmd_recv.arm_mode == ARM_ZERO_FORCE) {
+        DMMotorStop(maximal_arm);
+        DMMotorStop(minimal_arm);
+        DMMotorStop(finesse);
+        DMMotorStop(pitch_arm);
+        DJIMotorStop(lift);
+        DJIMotorStop(roll);
+    } else {
+        DMMotorEnable(maximal_arm);
+        DMMotorEnable(minimal_arm);
+        DMMotorEnable(finesse);
+        DMMotorEnable(pitch_arm);
+        DJIMotorEnable(lift);
+        DJIMotorEnable(roll);
+    }
+
+    VAL_LIMIT(arm_cmd_recv.maximal_arm, MAXARM_MIN, MAXARM_MAX);
+    VAL_LIMIT(arm_cmd_recv.minimal_arm, MINARM_MIN, MINARM_MAX);
+    VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN, FINE_MAX);
+    VAL_LIMIT(arm_cmd_recv.pitch_arm, PITCH_MIN, PITCH_MAX);
     DMMotorSetRef(maximal_arm, arm_cmd_recv.maximal_arm); // MIN -1.0,MAX 0.75
-
-    VAL_LIMIT(arm_cmd_recv.minimal_arm, -2.0f, 2.7f);
     DMMotorSetRef(minimal_arm, arm_cmd_recv.minimal_arm); // MIN -2.0,MAX 2.7
+    DMMotorSetRef(finesse, arm_cmd_recv.finesse);         // MIN -1.6,MAX 1.9
+    DMMotorSetRef(pitch_arm, arm_cmd_recv.pitch_arm);     // MIN -0.8,MAX 1.0
 
-    VAL_LIMIT(arm_cmd_recv.finesse, -1.6f, 1.9f);
-    DMMotorSetRef(finesse, arm_cmd_recv.finesse); // MIN -1.6,MAX 1.9
+    if (arm_cmd_recv.up_flag != 0) {
+        DJIMotorSetRef(lift, 1000 * arm_cmd_recv.up_flag);
+    } else {
+        DJIMotorSetRef(lift, 0);
+    }
 
-    VAL_LIMIT(arm_cmd_recv.pitch_arm, -0.8f, 1.0f);
-    DMMotorSetRef(pitch_arm, arm_cmd_recv.pitch_arm); // MIN -0.8,MAX 1.0
+    if (arm_cmd_recv.roll_flag != 0) {
+        DJIMotorSetRef(roll, 2500 * arm_cmd_recv.roll_flag);
+    } else {
+        DJIMotorSetRef(roll, 0);
+    }
 
+    arm_feedback_data.maximal_arm = maximal_arm->measure.position;
+    arm_feedback_data.minimal_arm = minimal_arm->measure.position;
+    arm_feedback_data.finesse     = finesse->measure.position;
+    arm_feedback_data.pitch_arm   = pitch_arm->measure.position;
     PubPushMessage(arm_pub, &arm_feedback_data);
 }

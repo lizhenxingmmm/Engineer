@@ -17,47 +17,42 @@
 
 #define VISION_RECV_HEADER 0xA5u // 视觉接收数据帧头
 #define VISION_SEND_HEADER 0x5Au // 视觉发送数据帧头
-#define VISION_SEND_TAIL 0xAAu   // 视觉发送数据帧尾
+#define VISION_SEND_TAIL   0xAAu // 视觉发送数据帧尾
 
-#define VISION_RECV_SIZE 12u // 当前为固定值,12字节
-#define VISION_SEND_SIZE 19u
+#define VISION_RECV_SIZE   25u // 当前为固定值,25字节
+#define VISION_SEND_SIZE   19u
 
 // #pragma pack(1) // 1字节对齐
 
 /* 是否追踪 */
-typedef enum
-{
+typedef enum {
     VISION_NO_SHOOTING = 0u,
-    VISION_SHOOTING = 1u,
+    VISION_SHOOTING    = 1u,
 } VISION_SHOOTING_e;
 
 /* 是否重置追踪 */
-typedef enum
-{
-    VISION_RESET_TRACKER_NO = 0u,
+typedef enum {
+    VISION_RESET_TRACKER_NO  = 0u,
     VISION_RESET_TRACKER_YES = 1u,
 } VISION_RESET_TRACKER_e;
 
 /* 目标ID */
-typedef enum
-{
+typedef enum {
     VISION_OUTPOST = 0u,
-    VISION_GUARD = 6u,
-    VISION_BASE = 7u,
+    VISION_GUARD   = 6u,
+    VISION_BASE    = 7u,
 } VISION_ID_e;
 
 /* 装甲板数量 */
-typedef enum
-{
+typedef enum {
     VISION_ARMORS_NUM_BALANCE = 2u,
     VISION_ARMORS_NUM_OUTPOST = 3u,
-    VISION_ARMORS_NUM_NORMAL = 4u,
+    VISION_ARMORS_NUM_NORMAL  = 4u,
 } VISION_ARMORS_NUM_e;
 
 /* 敌方装甲板颜色 */
-typedef enum
-{
-    VISION_DETECT_COLOR_RED = 0u,
+typedef enum {
+    VISION_DETECT_COLOR_RED  = 0u,
     VISION_DETECT_COLOR_BLUE = 1u,
 } VISION_DETECT_COLOR_e;
 
@@ -90,10 +85,12 @@ typedef struct
 typedef struct
 {
     uint8_t header;
-    uint8_t is_tracking;
-    float yaw;
-    float pitch;
-    uint16_t checksum;
+    float maximal_arm; // 大臂的目标值
+    float minimal_arm; // 小臂的目标值
+    float z_height;    // 机械臂高度
+    float finesse;     // 手腕的目标值
+    float pitch_arm;   // pitch的目标值
+    float yaw;         // yaw的目标值,2006电机角度值
 } Vision_Recv_s;
 
 /* stm32 -> minipc (发送结构体) */
@@ -142,7 +139,7 @@ Vision_Send_s *VisionSendRegister(Vision_Send_Init_Config_s *send_config);
  * @param init_config
  * @return Vision_Recv_s*
  */
-Vision_Recv_s *VisionInit(Vision_Init_Config_s *init_config);
+Vision_Recv_s *VisionInit(UART_HandleTypeDef *video_usart_handle);
 
 /**
  * @brief 发送函数

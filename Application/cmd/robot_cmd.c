@@ -21,6 +21,8 @@
 #include "VideoTransmitter.h"
 #include "message_center.h"
 #include "user_lib.h"
+#include "miniPC_process.h"
+#include "referee_protocol.h"
 #ifdef CHASSIS_BOARD
 static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
 static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
@@ -34,10 +36,12 @@ static Subscriber_t *arm_feed_sub; // 底盘反馈信息订阅者
 
 static Arm_Ctrl_Cmd_s arm_cmd_send;      // 发送给机械臂的信息
 static Arm_Upload_Data_s arm_fetch_data; // 从机械臂接受的反馈信息
+static Vision_Recv_s *vision_ctrl;       // 视觉控制信息
 #endif
 
-static void RemoteControlSet(void); // 遥控器控制量设置
-static void VideoControlSet(void);  // 图传链路控制量设置
+static void
+RemoteControlSet(void);            // 遥控器控制量设置
+static void VideoControlSet(void); // 图传链路控制量设置
 static void EmergencyHandler(void);
 static RC_ctrl_t *rc_data;       // 遥控器数据指针,初始化时返回
 static Video_ctrl_t *video_data; // 视觉数据指针,初始化时返回
@@ -51,8 +55,9 @@ static Video_ctrl_t *video_data; // 视觉数据指针,初始化时返回
 void RobotCMDInit(void)
 {
 #ifdef ARM_BOARD
-    video_data = VideoTransmitterControlInit(&huart6); // 初始化图传链路
-    rc_data    = RemoteControlInit(&huart1);           // 初始化遥控器,C板上使用USART1
+    video_data  = VideoTransmitterControlInit(&huart6); // 初始化图传链路
+    rc_data     = RemoteControlInit(&huart1);           // 初始化遥控器,C板上使用USART1
+    vision_ctrl = VisionInit(&huart3);                  // 初始化视觉控制
 
     arm_cmd_pub  = PubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_feed_sub = SubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
@@ -106,7 +111,54 @@ void RobotCMDTask(void)
  */
 static void RemoteControlSet(void)
 {
+#ifdef CHASSIS_BOARD
+    chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
+    // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
+    chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
+    chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
+    chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
+#endif
 }
+#ifdef ARM_BOARD
+// 发送给机械臂
+static void VideoKey(void)
+{
+    arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
+    arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.003f;
+    arm_cmd_send.minimal_arm += (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 0.003f;
+    arm_cmd_send.finesse += (video_data[TEMP].key[KEY_PRESS].z - video_data[TEMP].key[KEY_PRESS].c) * 0.003f;
+    arm_cmd_send.pitch_arm += (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 0.003f;
+    if (video_data[TEMP].key_data.left_button_down)
+        arm_cmd_send.up_flag = 6;
+    else if (video_data[TEMP].key_data.right_button_down)
+        arm_cmd_send.up_flag = -4;
+    else
+        arm_cmd_send.up_flag = 0;
+    if (video_data[TEMP].key[KEY_PRESS].f)
+        arm_cmd_send.roll_flag = 1;
+    else if (video_data[TEMP].key[KEY_PRESS].g)
+        arm_cmd_send.roll_flag = -1;
+    else
+        arm_cmd_send.roll_flag = 0;
+}
+
+static void VideoCustom(void)
+{
+    arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
+    // 没收到自定义控制器数据直接返回
+    if (video_data[TEMP].CmdID != ID_custom_robot_data) {
+        arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
+        arm_cmd_send.minimal_arm = arm_fetch_data.minimal_arm;
+        arm_cmd_send.finesse     = arm_fetch_data.finesse;
+        arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
+        return;
+    }
+    arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
+    arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
+    arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target;
+    arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
+}
+#endif
 
 /**
  * @brief 图传链路以及自定义控制器的模式和控制量设置
@@ -116,22 +168,34 @@ static void VideoControlSet(void)
 {
     // 直接测试，稍后会添加到函数中
 #ifdef ARM_BOARD
-    arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
-    arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
+    // 机械臂控制
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 2) {
+        case 0:
+            VideoCustom();
+            break;
+        default:
+            VideoKey();
+            break;
+    }
 
-    arm_cmd_send.finesse   = video_data[TEMP].cus.finesse_target;
-    arm_cmd_send.pitch_arm = video_data[TEMP].cus.pitch_arm_target;
-
-    VAL_LIMIT(arm_cmd_send.maximal_arm, -1.0f, 0.74f);
-    VAL_LIMIT(arm_cmd_send.minimal_arm, -2.0f, 2.7f);
-    VAL_LIMIT(arm_cmd_send.finesse, -1.6f, 1.9f);
-    VAL_LIMIT(arm_cmd_send.pitch_arm, -0.8f, 1.0f);
+    VAL_LIMIT(arm_cmd_send.maximal_arm, MAXARM_MIN, MAXARM_MAX);
+    VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
+    VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
+    VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
 #endif
 #ifdef CHASSIS_BOARD
-    chassis_cmd_send.chassis_mode       = CHASSIS_SLOW;
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 2) {
+        case 0:
+            chassis_cmd_send.chassis_mode = CHASSIS_SLOW;
+            break;
+        default:
+            chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
+            break;
+    }
+
     chassis_cmd_send.vx                 = (video_data[TEMP].key[KEY_PRESS].a - video_data[TEMP].key[KEY_PRESS].d) * 2000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
     chassis_cmd_send.vy                 = (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 2000 * chassis_cmd_send.chassis_speed_buff; // 系数待测                                                                                                         // test
-    chassis_cmd_send.wz                 = video_data[TEMP].key_data.mouse_x * 10 + (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 500 * chassis_cmd_send.chassis_speed_buff;
+    chassis_cmd_send.wz                 = (float)video_data[TEMP].key_data.mouse_x * 10 + (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 500 * chassis_cmd_send.chassis_speed_buff;
     chassis_cmd_send.chassis_speed_buff = 1; // test
 #endif
 }

@@ -31,6 +31,15 @@
 // #define VIDEO_LINKK // 是否有图传链路
 #define REMOTE_LINK // 是否有常规链路
 
+#define MAXARM_MIN  -1.0f
+#define MAXARM_MAX  0.74f
+#define MINARM_MIN  -2.0f
+#define MINARM_MAX  2.7f
+#define FINE_MIN    -1.6f
+#define FINE_MAX    1.9f
+#define PITCH_MIN   -0.8f
+#define PITCH_MAX   0.8f
+
 // 检查是否出现主控板定义冲突,只允许一个开发板定义存在,否则编译会自动报错
 #if (defined(ONE_BOARD) && defined(CHASSIS_BOARD)) || \
     (defined(ONE_BOARD) && defined(ARM_BOARD)) ||     \
@@ -159,6 +168,9 @@ typedef struct
     float minimal_arm;
     float finesse;
     float pitch_arm;
+    float lift;
+    int8_t up_flag;
+    int8_t roll_flag;
     arm_mode_e arm_mode;
 } Arm_Ctrl_Cmd_s;
 
@@ -225,7 +237,10 @@ typedef struct
 // 机械臂反馈数据
 typedef struct
 {
-    // ...
+    float maximal_arm;
+    float minimal_arm;
+    float finesse;
+    float pitch_arm;
 } Arm_Upload_Data_s;
 
 typedef struct
