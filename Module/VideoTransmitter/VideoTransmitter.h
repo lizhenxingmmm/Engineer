@@ -31,10 +31,21 @@ typedef struct
 
 typedef struct
 {
+    float delta_x;
+    float delta_y;
+    float delta_z;
+    float delta_yaw;
+    float delta_pitch;
+    float delta_roll;
+} slightly_controll_data;
+
+typedef struct
+{
     xFrameHeader FrameHeader;        // 接收到的帧头信息
     uint16_t CmdID;                  // 命令码
     custom_robot_data_t custom_data; // 自定义数据
     Custom_contorl_t cus;            // 解算后的自定义数据
+    slightly_controll_data scd;      // 轻微控制数据
     remote_control_t key_data;       // 遥控器数据
 
     Key_t key[3]; // 改为位域后的键盘索引,空间减少8倍,速度增加16~倍

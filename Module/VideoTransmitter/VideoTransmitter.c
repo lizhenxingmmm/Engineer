@@ -84,9 +84,15 @@ static void VideoRead(uint8_t *buff)
                 // 解析数据命令码,将数据拷贝到相应结构体中(注意拷贝数据的长度)
                 // 第8个字节开始才是数据 data=7
                 switch (video_ctrl[TEMP].CmdID) {
-                    case ID_custom_robot_data: // 自定义数据
-                        memcpy(&video_ctrl[TEMP].custom_data, (buff + DATA_Offset), LEN_custom_robot_data);
-                        memcpy(&video_ctrl[TEMP].cus, &video_ctrl[TEMP].custom_data, 16);
+                    case ID_custom_robot_data:         // 自定义数据
+                        if (buff[DATA_Offset] == 0x2A) // 0x2A为自定义微调数据
+                        {
+                            memcpy(&video_ctrl[TEMP].custom_data, (buff + DATA_Offset + 1), LEN_custom_robot_data);
+                            memcpy(&video_ctrl[TEMP].scd, &video_ctrl[TEMP].custom_data, 24);
+                        } else {
+                            memcpy(&video_ctrl[TEMP].custom_data, (buff + DATA_Offset + 1), LEN_custom_robot_data);
+                            memcpy(&video_ctrl[TEMP].cus, &video_ctrl[TEMP].custom_data, 16);
+                        }
                         break;
                     case ID_remote_control_data: // 图传链路键鼠数据
                         memcpy(&video_ctrl[TEMP].key_data, (buff + DATA_Offset), LEN_remote_control_data);

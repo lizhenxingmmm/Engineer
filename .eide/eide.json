@@ -111,7 +111,8 @@
           "Module/motor/DMmotor",
           "Application/test",
           "Application/arm",
-          "Application/chassis"
+          "Application/chassis",
+          "Module/scara_kinematics"
         ],
         "libList": [
           "Middlewares/ST/ARM/DSP/Lib"

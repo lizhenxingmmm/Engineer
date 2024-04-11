@@ -23,6 +23,8 @@
 #include "user_lib.h"
 #include "miniPC_process.h"
 #include "referee_protocol.h"
+#include "scara_kinematics.h"
+#include "arm_math.h"
 #ifdef CHASSIS_BOARD
 static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
 static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
@@ -120,43 +122,88 @@ static void RemoteControlSet(void)
 #endif
 }
 #ifdef ARM_BOARD
+static void Recycle(void)
+{
+
+    arm_cmd_send.maximal_arm = 0.1966f;
+    arm_cmd_send.minimal_arm = 2.6995f;
+    arm_cmd_send.finesse     = 0.1878f;
+    arm_cmd_send.pitch_arm   = -0.8001f;
+
+    // arm_cmd_send.roll = arm_fetch_data.roll;
+    // arm_cmd_send.lift = arm_fetch_data.height;
+}
+
 // 发送给机械臂
 static void VideoKey(void)
 {
     arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
-    arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.003f;
+    arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.002f;
     arm_cmd_send.minimal_arm += (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 0.003f;
     arm_cmd_send.finesse += (video_data[TEMP].key[KEY_PRESS].z - video_data[TEMP].key[KEY_PRESS].c) * 0.003f;
     arm_cmd_send.pitch_arm += (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 0.003f;
-    if (video_data[TEMP].key_data.left_button_down)
+    if (video_data[TEMP].key_data.left_button_down) {
         arm_cmd_send.up_flag = 6;
-    else if (video_data[TEMP].key_data.right_button_down)
+    } else if (video_data[TEMP].key_data.right_button_down) {
         arm_cmd_send.up_flag = -4;
-    else
+    } else {
         arm_cmd_send.up_flag = 0;
+    }
+    arm_cmd_send.lift = (6 * (video_data[TEMP].key_data.left_button_down) - 4 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
     if (video_data[TEMP].key[KEY_PRESS].f)
         arm_cmd_send.roll_flag = 1;
     else if (video_data[TEMP].key[KEY_PRESS].g)
         arm_cmd_send.roll_flag = -1;
     else
         arm_cmd_send.roll_flag = 0;
+    if (video_data[TEMP].key[KEY_PRESS].r)
+        Recycle();
 }
 
 static void VideoCustom(void)
 {
     arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
     // 没收到自定义控制器数据直接返回
-    if (video_data[TEMP].CmdID != ID_custom_robot_data) {
-        arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
-        arm_cmd_send.minimal_arm = arm_fetch_data.minimal_arm;
-        arm_cmd_send.finesse     = arm_fetch_data.finesse;
-        arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
-        return;
-    }
+    // if (video_data[TEMP].CmdID != ID_custom_robot_data) {
+    //     arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
+    //     arm_cmd_send.minimal_arm = arm_fetch_data.minimal_arm;
+    //     arm_cmd_send.finesse     = arm_fetch_data.finesse;
+    //     arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
+    //     return;
+    // }
     arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
     arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
     arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target;
     arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
+}
+
+static void VideoSlightlyContorl(void)
+{
+    arm_cmd_send.arm_mode = ARM_SLIGHTLY_CONTROL;
+    // 没收到轻微控制器数据直接返回
+    // if (video_data[TEMP].CmdID != ID_custom_robot_data) {
+    //     arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
+    //     arm_cmd_send.minimal_arm = arm_fetch_data.minimal_arm;
+    //     arm_cmd_send.finesse     = arm_fetch_data.finesse;
+    //     arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
+    //     return;
+    // }
+    float angle_arm[4];
+    float angle_ref[6];
+    angle_arm[0] = arm_fetch_data.maximal_arm;
+    angle_arm[1] = arm_fetch_data.minimal_arm;
+    angle_arm[2] = arm_fetch_data.finesse;
+    angle_arm[3] = arm_fetch_data.pitch_arm;
+    // 轻微控制器数据
+    GC_get_target_angles_slightly(angle_arm, arm_fetch_data.height, 0, video_data[TEMP].scd.delta_x,
+                                  video_data[TEMP].scd.delta_y, video_data[TEMP].scd.delta_z, video_data[TEMP].scd.delta_yaw,
+                                  video_data[TEMP].scd.delta_pitch, video_data[TEMP].scd.delta_roll, angle_ref);
+    // arm_cmd_send.maximal_arm = angle_ref[0];
+    // arm_cmd_send.minimal_arm = angle_ref[1];
+    // arm_cmd_send.finesse     = angle_ref[2];
+    // arm_cmd_send.pitch_arm   = angle_ref[3];
+    // arm_cmd_send.roll        = angle_ref[4];
+    // arm_cmd_send.lift        = angle_ref[5];
 }
 #endif
 
@@ -169,9 +216,12 @@ static void VideoControlSet(void)
     // 直接测试，稍后会添加到函数中
 #ifdef ARM_BOARD
     // 机械臂控制
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 2) {
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 3) {
         case 0:
             VideoCustom();
+            break;
+        case 1:
+            VideoSlightlyContorl();
             break;
         default:
             VideoKey();
@@ -182,6 +232,7 @@ static void VideoControlSet(void)
     VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
     VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
     VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
+    // VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
 #endif
 #ifdef CHASSIS_BOARD
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 2) {

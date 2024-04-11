@@ -33,12 +33,14 @@
 
 #define MAXARM_MIN  -1.0f
 #define MAXARM_MAX  0.74f
-#define MINARM_MIN  -2.0f
+#define MINARM_MIN  -1.9f
 #define MINARM_MAX  2.7f
 #define FINE_MIN    -1.6f
 #define FINE_MAX    1.9f
 #define PITCH_MIN   -0.8f
 #define PITCH_MAX   0.8f
+#define HEIGHT_MIN  10.f
+#define HEIGHT_MAX  355.f
 
 // 检查是否出现主控板定义冲突,只允许一个开发板定义存在,否则编译会自动报错
 #if (defined(ONE_BOARD) && defined(CHASSIS_BOARD)) || \
@@ -135,10 +137,11 @@ typedef enum {
 
 // 机械臂模式设置
 typedef enum {
-    ARM_ZERO_FORCE = 0, // 电流零输入
-    ARM_HUM_CONTORL,    // 自定义控制器控制
-    ARM_AUTO_CONTROL,   // 自动控制
-    ARM_KEY_CONTROL,    // 键盘控制
+    ARM_ZERO_FORCE = 0,   // 电流零输入
+    ARM_HUM_CONTORL,      // 自定义控制器控制
+    ARM_AUTO_CONTROL,     // 自动控制
+    ARM_SLIGHTLY_CONTROL, // 轻微控制
+    ARM_KEY_CONTROL,      // 键盘控制
 } arm_mode_e;
 
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
@@ -169,6 +172,7 @@ typedef struct
     float finesse;
     float pitch_arm;
     float lift;
+    float roll;
     int8_t up_flag;
     int8_t roll_flag;
     arm_mode_e arm_mode;
@@ -241,6 +245,7 @@ typedef struct
     float minimal_arm;
     float finesse;
     float pitch_arm;
+    float height;
 } Arm_Upload_Data_s;
 
 typedef struct
