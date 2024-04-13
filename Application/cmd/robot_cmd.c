@@ -122,6 +122,24 @@ static void RemoteControlSet(void)
 #endif
 }
 #ifdef ARM_BOARD
+/**
+ * @brief 保持机械臂当前位置不变
+ *
+ */
+static void ArmKeep(void)
+{
+    arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
+    arm_cmd_send.minimal_arm = arm_fetch_data.minimal_arm;
+    arm_cmd_send.finesse     = arm_fetch_data.finesse;
+    arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
+    arm_cmd_send.lift        = arm_fetch_data.height;
+    arm_cmd_send.roll        = arm_fetch_data.roll;
+}
+
+/**
+ * @brief 一键回收模式调用函数
+ *
+ */
 static void Recycle(void)
 {
 
@@ -134,10 +152,16 @@ static void Recycle(void)
     // arm_cmd_send.lift = arm_fetch_data.height;
 }
 
-// 一键取矿石模式
+/**
+ * @brief 一键取矿模式，根据按钮下的按键数量判断机械臂应该达到的位置
+ *
+ */
 static void VideoAutoGet(void)
 {
     arm_cmd_send.arm_mode = ARM_AUTO_CONTORL;
+    if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
+        ArmKeep();
+    }
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
         case 0:
             arm_cmd_send.maximal_arm = 0.f;
@@ -152,7 +176,10 @@ static void VideoAutoGet(void)
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
-// 发送给机械臂
+/**
+ * @brief 键盘控制模式
+ *
+ */
 static void VideoKey(void)
 {
     arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
@@ -161,13 +188,15 @@ static void VideoKey(void)
     arm_cmd_send.finesse += (video_data[TEMP].key[KEY_PRESS].z - video_data[TEMP].key[KEY_PRESS].c) * 0.003f;
     arm_cmd_send.pitch_arm += (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 0.003f;
     if (video_data[TEMP].key_data.left_button_down) {
-        arm_cmd_send.up_flag = 6;
+        arm_cmd_send.up_flag = 1;
+        arm_cmd_send.lift    = 20;
     } else if (video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.up_flag = -4;
+        arm_cmd_send.lift    = -20;
+        arm_cmd_send.up_flag = -1;
     } else {
         arm_cmd_send.up_flag = 0;
     }
-    arm_cmd_send.lift = (6 * (video_data[TEMP].key_data.left_button_down) - 4 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
+    // arm_cmd_send.lift = (6 * (video_data[TEMP].key_data.left_button_down) - 4 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
     if (video_data[TEMP].key[KEY_PRESS].f)
         arm_cmd_send.roll_flag = 1;
     else if (video_data[TEMP].key[KEY_PRESS].g)
@@ -177,17 +206,13 @@ static void VideoKey(void)
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
+/**
+ * @brief 自定义控制器正常模式控制
+ *
+ */
 static void VideoCustom(void)
 {
-    arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
-    // 没收到自定义控制器数据直接返回
-    // if (video_data[TEMP].CmdID != ID_custom_robot_data) {
-    //     arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
-    //     arm_cmd_send.minimal_arm = arm_fetch_data.minimal_arm;
-    //     arm_cmd_send.finesse     = arm_fetch_data.finesse;
-    //     arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
-    //     return;
-    // }
+    arm_cmd_send.arm_mode    = ARM_HUM_CONTORL;
     arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
     arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
     arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target;
@@ -196,20 +221,33 @@ static void VideoCustom(void)
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
+/**
+ * @brief 视觉控制器
+ *
+ */
+static void VisionContorl(void)
+{
+    arm_cmd_send.arm_mode = ARM_VISION_CONTROL;
+    if (video_data[TEMP].key[KEY_PRESS].v) { // 按下V键向视觉发送数据
+        VisionSend(1);
+    } else {
+        VisionSend(0);
+    }
+
+    arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
+}
+
+/**
+ * @brief 自定义控制器的微调模式
+ *
+ */
 static void VideoSlightlyContorl(void)
 {
     arm_cmd_send.arm_mode = ARM_SLIGHTLY_CONTROL;
     if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
         StateInit(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, 0);
     }
-    // 没收到轻微控制器数据直接返回
-    // if (video_data[TEMP].CmdID != ID_custom_robot_data) {
-    //     arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
-    //     arm_cmd_send.minimal_arm = arm_fetch_data.minimal_arm;
-    //     arm_cmd_send.finesse     = arm_fetch_data.finesse;
-    //     arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
-    //     return;
-    // }
+
     float angle_ref[6];
     // 轻微控制器数据
     video_data[TEMP].scd.delta_x = -100;
@@ -235,15 +273,18 @@ static void VideoControlSet(void)
     // 直接测试，稍后会添加到函数中
 #ifdef ARM_BOARD
     // 机械臂控制
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 4) {
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 5) {
         case 0:
-            VideoCustom();
+            VideoKey();
             break;
         case 1:
-            VideoSlightlyContorl();
+            VideoCustom();
             break;
         case 2:
-            VideoKey();
+            VisionContorl();
+            break;
+        case 3:
+            VideoSlightlyContorl();
             break;
         default:
             VideoAutoGet();

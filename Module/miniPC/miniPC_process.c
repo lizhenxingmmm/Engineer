@@ -67,9 +67,9 @@ static void VisionOfflineCallback(void *id)
  */
 void VisionSetAltitude(float yaw, float pitch, float roll)
 {
-    vision_instance->send_data->yaw   = yaw;
-    vision_instance->send_data->pitch = pitch;
-    vision_instance->send_data->roll  = roll;
+    // vision_instance->send_data->yaw   = yaw;
+    // vision_instance->send_data->pitch = pitch;
+    // vision_instance->send_data->roll  = roll;
 }
 
 /**
@@ -79,7 +79,7 @@ void VisionSetAltitude(float yaw, float pitch, float roll)
  * @param tx_buff 发送缓冲区
  *
  */
-static void SendProcess(Vision_Send_s *send, uint8_t *tx_buff)
+__unused static void SendProcess(Vision_Send_s *send, uint8_t *tx_buff)
 {
     /* 发送帧头，目标颜色，是否重置等数据 */
 }
@@ -111,11 +111,11 @@ Vision_Send_s *VisionSendRegister(Vision_Send_Init_Config_s *send_config)
     Vision_Send_s *send_data = (Vision_Send_s *)malloc(sizeof(Vision_Send_s));
     memset(send_data, 0, sizeof(Vision_Send_s));
 
-    send_data->header        = send_config->header;
-    send_data->detect_color  = send_config->detect_color;
-    send_data->reset_tracker = send_config->reset_tracker;
-    send_data->is_shoot      = send_config->is_shoot;
-    send_data->tail          = send_config->tail;
+    send_data->header = send_config->header;
+    // send_data->detect_color  = send_config->detect_color;
+    // send_data->reset_tracker = send_config->reset_tracker;
+    // send_data->is_shoot      = send_config->is_shoot;
+    // send_data->tail          = send_config->tail;
     return send_data;
 }
 
@@ -185,8 +185,11 @@ Vision_Recv_s *VisionInit(UART_HandleTypeDef *video_usart_handle)
     vis_recv_buff              = USBInit(conf);
     recv_config.header         = VISION_RECV_HEADER;
     vision_instance->recv_data = VisionRecvRegister(&recv_config);
-    /* 暂时不需要发送 */
-    // vision_instance->send_data      = VisionSendRegister(&init_config->send_config);
+
+    Vision_Send_Init_Config_s send_config = {
+        .header = VISION_SEND_HEADER,
+    };
+    vision_instance->send_data = VisionSendRegister(&send_config);
     // 为master process注册daemon,用于判断视觉通信是否离线
     Daemon_Init_Config_s daemon_conf = {
         .callback     = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收
@@ -203,10 +206,14 @@ Vision_Recv_s *VisionInit(UART_HandleTypeDef *video_usart_handle)
  * @param send 待发送数据
  *
  */
-void VisionSend()
+void VisionSend(uint8_t is_start)
 {
     static uint8_t send_buff[VISION_SEND_SIZE];
-    SendProcess(vision_instance->send_data, send_buff);
+    if (is_start == 1) {
+        send_buff[0] = vision_instance->send_data->header;
+    } else {
+        send_buff[0] = 0;
+    }
     USBTransmit(send_buff, VISION_SEND_SIZE);
 }
 

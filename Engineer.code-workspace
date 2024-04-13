@@ -19,7 +19,11 @@
             "*.cpp": "cpp",
             "*.cxx": "cpp",
             "*.cc": "cpp",
-            "limits": "c"
+            "limits": "c",
+            "cstdio": "c",
+            "exception": "c",
+            "new": "c",
+            "type_traits": "c"
         },
         "[yaml]": {
             "editor.insertSpaces": true,

@@ -18,7 +18,7 @@ static Arm_Upload_Data_s arm_feedback_data; // 从底盘接收的数据
 static DM_MotorInstance *maximal_arm, *minimal_arm, *finesse, *pitch_arm;
 static DJIMotor_Instance *lift, *roll;
 static int8_t is_init;
-static float roll_init_angle, lift_init_angle, height;
+static float roll_init_angle, lift_init_angle, height, lift_speed_feedfoward = 5.0f, lift_current_feedfoward = 1.f;
 
 static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会回到原位，当然可以重新置零，但是工程的机械臂要限位？
 {
@@ -41,7 +41,7 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
 
 static void Height_Calculation(void)
 {
-    height = 350.0f + (lift->measure.total_angle - lift_init_angle) / LIFT_OFFSET;
+    height = -(lift->measure.total_angle - lift_init_angle) / LIFT_OFFSET;
 }
 
 void ArmInit(void)
@@ -79,38 +79,44 @@ void ArmInit(void)
         },
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp                = 90,
-                .Ki                = 0.02,
-                .Kd                = 2,
+                .Kp                = 100,
+                .Ki                = 0,
+                .Kd                = 0.2,
                 .Improve           = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement | PID_DerivativeFilter | PID_ErrorHandle,
                 .IntegralLimit     = 10000,
                 .MaxOut            = 15000,
                 .Derivative_LPF_RC = 0.01,
             },
             .speed_PID = {
-                .Kp            = 10,  // 10
-                .Ki            = 0.1, // 1
-                .Kd            = 0,
+                .Kp = 2,  // 10
+                .Ki = 75, // 1
+                .Kd = 0,
+                // .CoefA         = 0.2,
+                // .CoefB         = 0.3,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 10000,
                 .MaxOut        = 15000,
             },
             .current_PID = {
-                .Kp            = 0.7, // 0.7
-                .Ki            = 0,   // 0.1
+                .Kp            = 0.9, // 0.7
+                .Ki            = 0.1, // 0.1
                 .Kd            = 0,
                 .Improve       = PID_Integral_Limit,
                 .IntegralLimit = 10000,
                 .MaxOut        = 15000,
-                .DeadBand      = 0.1,
+                // .DeadBand      = 0.1,
             },
             .other_angle_feedback_ptr = &height,
+            .speed_feedforward_ptr    = &lift_speed_feedfoward,
+            .current_feedforward_ptr  = &lift_current_feedfoward,
         },
         .controller_setting_init_config = {
-            .angle_feedback_source = OTHER_FEED, .speed_feedback_source = MOTOR_FEED,
-            .outer_loop_type    = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转
-            .close_loop_type    = CURRENT_LOOP | SPEED_LOOP | ANGLE_LOOP,
-            .motor_reverse_flag = MOTOR_DIRECTION_NORMAL, // ！！！ 只有在只对速度闭环时才能反向 ！！！
+            .angle_feedback_source = OTHER_FEED,
+            .speed_feedback_source = MOTOR_FEED,
+            .outer_loop_type       = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转
+            .close_loop_type       = CURRENT_LOOP | SPEED_LOOP | ANGLE_LOOP,
+            .motor_reverse_flag    = MOTOR_DIRECTION_NORMAL, // ！！！ 只有在只对速度闭环时才能反向 ！！！
+            .feedforward_flag      = CURRENT_AND_SPEED_FEEDFORWARD,
         },
         .motor_type = M3508};
     lift = DJIMotorInit(&lift_config);
@@ -224,5 +230,6 @@ void ARMTask(void)
     arm_feedback_data.finesse     = finesse->measure.position;
     arm_feedback_data.pitch_arm   = pitch_arm->measure.position;
     arm_feedback_data.height      = height;
+    arm_feedback_data.roll        = roll->measure.total_angle;
     PubPushMessage(arm_pub, &arm_feedback_data);
 }

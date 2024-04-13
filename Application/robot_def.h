@@ -139,7 +139,7 @@ typedef enum {
 typedef enum {
     ARM_ZERO_FORCE = 0,   // 电流零输入
     ARM_HUM_CONTORL,      // 自定义控制器控制
-    ARM_AUTO_CONTROL,     // 自动控制
+    ARM_VISION_CONTROL,   // 视觉控制
     ARM_SLIGHTLY_CONTROL, // 轻微控制
     ARM_KEY_CONTROL,      // 键盘控制
     ARM_AUTO_CONTORL,     // 自动控制
@@ -248,6 +248,7 @@ typedef struct
     float finesse;
     float pitch_arm;
     float height;
+    float roll;
 } Arm_Upload_Data_s;
 
 typedef struct
