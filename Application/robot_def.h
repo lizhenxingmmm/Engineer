@@ -142,6 +142,7 @@ typedef enum {
     ARM_AUTO_CONTROL,     // 自动控制
     ARM_SLIGHTLY_CONTROL, // 轻微控制
     ARM_KEY_CONTROL,      // 键盘控制
+    ARM_AUTO_CONTORL,     // 自动控制
 } arm_mode_e;
 
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
@@ -176,6 +177,7 @@ typedef struct
     int8_t up_flag;
     int8_t roll_flag;
     arm_mode_e arm_mode;
+    arm_mode_e arm_mode_last;
 } Arm_Ctrl_Cmd_s;
 
 // cmd发布的云台控制数据,由gimbal订阅

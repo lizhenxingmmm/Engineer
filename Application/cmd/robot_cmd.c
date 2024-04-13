@@ -134,6 +134,24 @@ static void Recycle(void)
     // arm_cmd_send.lift = arm_fetch_data.height;
 }
 
+// 一键取矿石模式
+static void VideoAutoGet(void)
+{
+    arm_cmd_send.arm_mode = ARM_AUTO_CONTORL;
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
+        case 0:
+            arm_cmd_send.maximal_arm = 0.f;
+            arm_cmd_send.minimal_arm = 0.f;
+            arm_cmd_send.finesse     = 0.;
+            arm_cmd_send.pitch_arm   = 0.f;
+            break;
+        default:
+            Recycle();
+            break;
+    }
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
+}
+
 // 发送给机械臂
 static void VideoKey(void)
 {
@@ -156,8 +174,7 @@ static void VideoKey(void)
         arm_cmd_send.roll_flag = -1;
     else
         arm_cmd_send.roll_flag = 0;
-    if (video_data[TEMP].key[KEY_PRESS].r)
-        Recycle();
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
 static void VideoCustom(void)
@@ -175,11 +192,16 @@ static void VideoCustom(void)
     arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
     arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target;
     arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
+
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
 static void VideoSlightlyContorl(void)
 {
     arm_cmd_send.arm_mode = ARM_SLIGHTLY_CONTROL;
+    if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
+        StateInit(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, 0);
+    }
     // 没收到轻微控制器数据直接返回
     // if (video_data[TEMP].CmdID != ID_custom_robot_data) {
     //     arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
@@ -188,22 +210,19 @@ static void VideoSlightlyContorl(void)
     //     arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
     //     return;
     // }
-    float angle_arm[4];
     float angle_ref[6];
-    angle_arm[0] = arm_fetch_data.maximal_arm;
-    angle_arm[1] = arm_fetch_data.minimal_arm;
-    angle_arm[2] = arm_fetch_data.finesse;
-    angle_arm[3] = arm_fetch_data.pitch_arm;
     // 轻微控制器数据
-    GC_get_target_angles_slightly(angle_arm, arm_fetch_data.height, 0, video_data[TEMP].scd.delta_x,
-                                  video_data[TEMP].scd.delta_y, video_data[TEMP].scd.delta_z, video_data[TEMP].scd.delta_yaw,
-                                  video_data[TEMP].scd.delta_pitch, video_data[TEMP].scd.delta_roll, angle_ref);
-    // arm_cmd_send.maximal_arm = angle_ref[0];
-    // arm_cmd_send.minimal_arm = angle_ref[1];
-    // arm_cmd_send.finesse     = angle_ref[2];
-    // arm_cmd_send.pitch_arm   = angle_ref[3];
-    // arm_cmd_send.roll        = angle_ref[4];
-    // arm_cmd_send.lift        = angle_ref[5];
+    video_data[TEMP].scd.delta_x = -100;
+    video_data[TEMP].scd.delta_y = 100;
+    GC_get_target_angles_slightly(video_data[TEMP].scd, angle_ref);
+    arm_cmd_send.maximal_arm = angle_ref[0];
+    arm_cmd_send.minimal_arm = angle_ref[1];
+    arm_cmd_send.finesse     = angle_ref[2];
+    arm_cmd_send.pitch_arm   = angle_ref[3];
+    arm_cmd_send.roll        = angle_ref[4];
+    arm_cmd_send.lift        = angle_ref[5];
+
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 #endif
 
@@ -216,15 +235,18 @@ static void VideoControlSet(void)
     // 直接测试，稍后会添加到函数中
 #ifdef ARM_BOARD
     // 机械臂控制
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 3) {
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 4) {
         case 0:
             VideoCustom();
             break;
         case 1:
             VideoSlightlyContorl();
             break;
-        default:
+        case 2:
             VideoKey();
+            break;
+        default:
+            VideoAutoGet();
             break;
     }
 

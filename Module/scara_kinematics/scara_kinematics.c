@@ -17,6 +17,9 @@ static float x_limit[2] = {-250.0f, 440.0f};
 y_axis
 */
 
+static initial_state init_state;
+static uint8_t last_cmd;
+
 /**
  * @brief two dimensional scara
  * @param handcoor 1:right hand 2:left hand
@@ -47,14 +50,6 @@ void scara_inverse_kinematics(float x, float y, float L1, float L2, uint8_t hand
     }
     angles[1] = atan2(sin_beta, cos_beta);
     angles[0] = atan2(y, x) - atan2(L2 * sin_beta, L1 + L2 * cos_beta);
-    // if(angles[1]<0)
-    // {
-    //     angles[1]+=2*3.14159f;
-    // }
-    // if(angles[0]<0)
-    // {
-    //     angles[0]+=2*3.14159f;
-    // }
 }
 
 /**
@@ -123,23 +118,38 @@ void scara_forward_kinematics(float angle1, float angle2, float L1, float L2, fl
  * @param delta_... 自定义发过来的微调数据
  * @param result 6个数，0大臂编码值，1小臂编码值，2yaw编码值，3pitch编码值，4roll角度，5z高度
  */
-void GC_get_target_angles_slightly(float angles[4], float z, float roll_angle, float delta_x, float delta_y, float delta_z, float delta_yaw, float delta_pitch, float delta_roll, float result[6])
+void GC_get_target_angles_slightly(slightly_controll_data data_pack, float result[6])
 {
     float xy[2];
     uint8_t handcoor;
     float res_angle[2];
-    scara_forward_kinematics(angles[0] + 0.96, angles[1] - 0.43, ARMLENGHT1, ARMLENGHT2, xy);
-    xy[0] += delta_x;
-    xy[1] += delta_y;
-    if (angles[1] - 0.43 < 0) { handcoor = 2; } // 机械臂呈左手形状
+    scara_forward_kinematics(init_state.init_angle1, init_state.init_angle2, ARMLENGHT1, ARMLENGHT2, xy);
+    xy[0] += data_pack.delta_x;
+    xy[1] += data_pack.delta_y;
+    if (init_state.init_angle2 < 0) { handcoor = 2; } // 机械臂呈左手形状
     else {
         handcoor = 1;
     } // 机械臂呈右手形状
     scara_inverse_kinematics(xy[0], xy[1], ARMLENGHT1, ARMLENGHT2, handcoor, res_angle);
     result[0] = res_angle[0];
     result[1] = res_angle[1];
-    result[2] = angles[2] + delta_yaw;
-    result[3] = angles[3] + delta_pitch;
-    result[4] = roll_angle + delta_roll;
-    result[5] = z + delta_z;
+    result[2] = init_state.init_yaw + data_pack.delta_yaw;
+    result[3] = init_state.init_pitch + data_pack.delta_pitch;
+    result[4] = init_state.init_roll + data_pack.delta_roll;
+    result[5] = init_state.init_Z + data_pack.delta_z;
+}
+
+void StateInit(float angle1, float angle2, float angle3, float angle4, float z, float roll_angle)
+{
+    init_state.init_angle1 = angle1;
+    init_state.init_angle2 = angle2;
+    init_state.init_yaw    = angle3;
+    init_state.init_pitch  = angle4;
+    init_state.init_Z      = z;
+    init_state.init_roll   = roll_angle;
+}
+
+void RecordMode(uint8_t HeadByte)
+{
+    last_cmd = HeadByte;
 }
