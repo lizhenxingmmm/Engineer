@@ -56,6 +56,13 @@ static void DMMotorDecode(CAN_Instance *motor_can)
 
 static void DMMotorLostCallback(void *motor_ptr)
 {
+    DM_MotorInstance *motor = (DM_MotorInstance *)motor_ptr;
+    DMMotorEnable(motor);
+    DWT_Delay(0.1);
+    DMMotorSetMode(DM_CMD_MOTOR_MODE, motor);
+    DMMotorEnable(motor);
+    DWT_Delay(0.1);
+    DMMotorSetMode(DM_CMD_MOTOR_MODE, motor);
 }
 
 void DMMotorCaliEncoder(DM_MotorInstance *motor)
@@ -187,7 +194,7 @@ static void DMMotorPositonSpeedContoroll(DM_MotorInstance *motor, float pos_ref,
     if (motor->stop_flag == MOTOR_STOP)
         send->velocity_sp = 0;
     else
-        send->velocity_sp = 0.5;
+        send->velocity_sp = speed_ref;
     send->position_sp = pos_ref;
     memcpy(motor->motor_can_instace->tx_buff, &send->position_sp, 4);
     memcpy(motor->motor_can_instace->tx_buff + 4, &send->velocity_sp, 4);
