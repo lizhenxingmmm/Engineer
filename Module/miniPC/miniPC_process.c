@@ -19,7 +19,13 @@ static void RecvProcess(Vision_Recv_s *recv, uint8_t *rx_buff)
 {
     /* 使用memcpy接收浮点型小数 */
     // memcpy(&recv->maximal_arm, rx_buff + 1, 4);
-    memcpy(recv + 1, rx_buff + 1, sizeof(Vision_Recv_s) - 1); /* 从第二个字节开始拷贝 */
+    // memcpy(&recv->minimal_arm, rx_buff + 5, 4);
+    // memcpy(&recv->z_height, rx_buff + 9, 4);
+    // memcpy(&recv->finesse, rx_buff + 13, 4);
+    // memcpy(&recv->pitch_arm, rx_buff + 17, 4);
+    // memcpy(&recv->yaw, rx_buff + 21, 4);
+
+    memcpy(&recv->maximal_arm, rx_buff + 1, sizeof(Vision_Recv_s) - 1); /* 从第二个字节开始拷贝 */
 }
 
 /**
