@@ -130,9 +130,8 @@ DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
     motor->motor_daemon = DaemonRegister(&conf);
 
     DMMotorEnable(motor);
-    DMMotorSetMode(DM_CMD_MOTOR_MODE, motor); // 记得打开
-
     DWT_Delay(0.1);
+    DMMotorSetMode(DM_CMD_MOTOR_MODE, motor); // 记得打开
     // 失能，测量数据用
     // DMMotorSetMode(DM_CMD_RESET_MODE, motor);
     DWT_Delay(0.1);

@@ -278,7 +278,8 @@ static void VideoControlSet(void)
     // 机械臂控制
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 5) {
         case 0:
-            VideoKey();
+            // VideoKey();
+            VisionContorl();
             break;
         case 1:
             VideoCustom();
