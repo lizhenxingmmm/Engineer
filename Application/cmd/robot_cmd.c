@@ -143,10 +143,12 @@ static void ArmKeep(void)
 static void Recycle(void)
 {
 
-    arm_cmd_send.maximal_arm = 0.1966f;
-    arm_cmd_send.minimal_arm = 2.6995f;
-    arm_cmd_send.finesse     = 0.1878f;
-    arm_cmd_send.pitch_arm   = -0.8001f;
+    arm_cmd_send.maximal_arm = -0.5589f;
+    arm_cmd_send.minimal_arm = 2.0130f;
+    arm_cmd_send.finesse     = 1.2939f;
+    arm_cmd_send.pitch_arm   = 0.5509f;
+    arm_cmd_send.lift        = -5;
+    arm_cmd_send.up_flag     = 1;
 
     // arm_cmd_send.roll = arm_fetch_data.roll;
     // arm_cmd_send.lift = arm_fetch_data.height;
@@ -161,12 +163,13 @@ static void VideoAutoGet(void)
     arm_cmd_send.arm_mode = ARM_AUTO_CONTORL;
     if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
         ArmKeep();
+        video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] = 0; // 清零，确保每次都从初始状态开始
     }
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
         case 0:
             arm_cmd_send.maximal_arm = 0.f;
             arm_cmd_send.minimal_arm = 0.f;
-            arm_cmd_send.finesse     = 0.;
+            arm_cmd_send.finesse     = 0.f;
             arm_cmd_send.pitch_arm   = 0.f;
             break;
         default:
@@ -183,20 +186,18 @@ static void VideoAutoGet(void)
 static void VideoKey(void)
 {
     arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
-    arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.002f;
+    arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
     arm_cmd_send.minimal_arm += (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 0.003f;
     arm_cmd_send.finesse += (video_data[TEMP].key[KEY_PRESS].z - video_data[TEMP].key[KEY_PRESS].c) * 0.003f;
     arm_cmd_send.pitch_arm += (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 0.003f;
     if (video_data[TEMP].key_data.left_button_down) {
         arm_cmd_send.up_flag = 1;
-        arm_cmd_send.lift    = 20;
     } else if (video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.lift    = -20;
         arm_cmd_send.up_flag = -1;
     } else {
         arm_cmd_send.up_flag = 0;
     }
-    // arm_cmd_send.lift = (6 * (video_data[TEMP].key_data.left_button_down) - 4 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
+    arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
     if (video_data[TEMP].key[KEY_PRESS].f)
         arm_cmd_send.roll_flag = 1;
     else if (video_data[TEMP].key[KEY_PRESS].g)
@@ -222,7 +223,7 @@ static void VideoCustom(void)
 }
 
 /**
- * @brief 视觉控制器
+ * @brief 视觉控制
  *
  */
 static void VisionContorl(void)
@@ -234,7 +235,10 @@ static void VisionContorl(void)
         VisionSend(0);
     }
 
-    arm_cmd_send.maximal_arm = arm_fetch_data.maximal_arm;
+    arm_cmd_send.maximal_arm = vision_ctrl->maximal_arm + MAXARM_ZERO;
+    arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
+    arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
+    arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
 }
 
 /**
@@ -250,8 +254,6 @@ static void VideoSlightlyContorl(void)
 
     float angle_ref[6];
     // 轻微控制器数据
-    video_data[TEMP].scd.delta_x = -100;
-    video_data[TEMP].scd.delta_y = 100;
     GC_get_target_angles_slightly(video_data[TEMP].scd, angle_ref);
     arm_cmd_send.maximal_arm = angle_ref[0];
     arm_cmd_send.minimal_arm = angle_ref[1];
@@ -259,6 +261,7 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.pitch_arm   = angle_ref[3];
     arm_cmd_send.roll        = angle_ref[4];
     arm_cmd_send.lift        = angle_ref[5];
+    // arm_cmd_send.up_flag     = 1;
 
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
@@ -295,7 +298,7 @@ static void VideoControlSet(void)
     VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
     VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
     VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
-    // VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
+    VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
 #endif
 #ifdef CHASSIS_BOARD
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 2) {

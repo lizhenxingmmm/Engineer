@@ -24,7 +24,7 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
 {
     DMMotorControlInit();
     DMMotorSetRef(maximal_arm, maximal_arm->measure.position);
-    DMMotorSetSpeedRef(maximal_arm, 0.5);
+    DMMotorSetSpeedRef(maximal_arm, 0.3);
 
     DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
     DMMotorSetSpeedRef(minimal_arm, 0.5);
@@ -79,16 +79,16 @@ void ArmInit(void)
         },
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp                = 100,
-                .Ki                = 0,
-                .Kd                = 0.2,
+                .Kp                = 200,
+                .Ki                = 1,
+                .Kd                = 2,
                 .Improve           = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement | PID_DerivativeFilter | PID_ErrorHandle,
                 .IntegralLimit     = 10000,
                 .MaxOut            = 15000,
                 .Derivative_LPF_RC = 0.01,
             },
             .speed_PID = {
-                .Kp = 2,  // 10
+                .Kp = 1,  // 10
                 .Ki = 75, // 1
                 .Kd = 0,
                 // .CoefA         = 0.2,

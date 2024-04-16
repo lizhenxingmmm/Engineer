@@ -31,6 +31,11 @@
 // #define VIDEO_LINKK // 是否有图传链路
 #define REMOTE_LINK // 是否有常规链路
 
+#define MAXARM_ZERO -0.96f
+#define MINARM_ZERO 0.43f
+#define FINE_ZERO   0.03f
+#define PITCH_ZERO  0.66f
+
 #define MAXARM_MIN  -1.0f
 #define MAXARM_MAX  0.74f
 #define MINARM_MIN  -1.9f
@@ -39,8 +44,8 @@
 #define FINE_MAX    1.9f
 #define PITCH_MIN   -0.8f
 #define PITCH_MAX   0.8f
-#define HEIGHT_MIN  10.f
-#define HEIGHT_MAX  355.f
+#define HEIGHT_MIN  -10.f
+#define HEIGHT_MAX  200.f
 
 // 检查是否出现主控板定义冲突,只允许一个开发板定义存在,否则编译会自动报错
 #if (defined(ONE_BOARD) && defined(CHASSIS_BOARD)) || \
