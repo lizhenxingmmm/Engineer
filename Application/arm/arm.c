@@ -5,6 +5,8 @@
 #include "DJI_motor.h"
 #include "message_center.h"
 #include "user_lib.h"
+#include "tim.h"
+#include "bsp_dwt.h"
 // 大臂 -0.19 小臂 -0.79就寄啦？
 #define LIFT_OFFSET (-287.81269f)
 
@@ -42,6 +44,16 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
 static void Height_Calculation(void)
 {
     height = -(lift->measure.total_angle - lift_init_angle) / LIFT_OFFSET;
+}
+
+static void Sucker_Init(void)
+{
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); //?????????1??PWM???
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 2000);
+    DWT_Delay(2);
+    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 }
 
 void ArmInit(void)
@@ -161,6 +173,8 @@ void ArmInit(void)
         },
         .motor_type = M2006};
     roll = DJIMotorInit(&roll_config);
+    HAL_TIM_Base_Start(&htim1); // 开启定时器1
+    Sucker_Init();
 }
 
 // lift的机械距离大约350mm 最高机械角度-64948 最低机械角度 22115
@@ -198,6 +212,7 @@ void ARMTask(void)
     VAL_LIMIT(arm_cmd_recv.minimal_arm, MINARM_MIN, MINARM_MAX);
     VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN, FINE_MAX);
     VAL_LIMIT(arm_cmd_recv.pitch_arm, PITCH_MIN, PITCH_MAX);
+    VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
     DMMotorSetRef(maximal_arm, arm_cmd_recv.maximal_arm); // MIN -1.0,MAX 0.75
     DMMotorSetRef(minimal_arm, arm_cmd_recv.minimal_arm); // MIN -2.0,MAX 2.7
     DMMotorSetRef(finesse, arm_cmd_recv.finesse);         // MIN -1.6,MAX 1.9
@@ -205,14 +220,7 @@ void ARMTask(void)
 
     if (arm_cmd_recv.up_flag != 0) {
         DJIMotorOuterLoop(lift, ANGLE_LOOP);
-        // 有了机械限位似乎不需要这个了
-        // if (height > HEIGHT_MAX) {
-        //     DJIMotorSetRef(lift, height + 5);
-        // } else if (height < HEIGHT_MIN) {
-        //     DJIMotorSetRef(lift, height - 5);
-        // } else {
         DJIMotorSetRef(lift, arm_cmd_recv.lift);
-        // }
     } else {
         DJIMotorOuterLoop(lift, ANGLE_LOOP);
         DJIMotorSetRef(lift, height);
@@ -222,6 +230,12 @@ void ARMTask(void)
         DJIMotorSetRef(roll, 2500 * arm_cmd_recv.roll_flag);
     } else {
         DJIMotorSetRef(roll, 0);
+    }
+
+    if (arm_cmd_recv.sucker_flag) {
+        __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 2000);
+    } else {
+        __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 1000);
     }
     Height_Calculation();
 

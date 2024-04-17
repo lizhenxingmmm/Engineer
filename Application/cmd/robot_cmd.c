@@ -154,6 +154,17 @@ static void Recycle(void)
     // arm_cmd_send.lift = arm_fetch_data.height;
 }
 
+static void SuckerContorl(void){
+    switch (video_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
+        case 1:
+            arm_cmd_send.sucker_flag = 1;
+            break;
+        default:
+            arm_cmd_send.sucker_flag = 0;
+            break;
+    }
+}
+
 /**
  * @brief 一键取矿模式，根据按钮下的按键数量判断机械臂应该达到的位置
  *
@@ -176,6 +187,7 @@ static void VideoAutoGet(void)
             Recycle();
             break;
     }
+    SuckerContorl();
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -204,6 +216,7 @@ static void VideoKey(void)
         arm_cmd_send.roll_flag = -1;
     else
         arm_cmd_send.roll_flag = 0;
+    SuckerContorl();
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -220,6 +233,7 @@ static void VideoCustom(void)
     arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
 
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
+    SuckerContorl();
 }
 
 /**
@@ -239,6 +253,9 @@ static void VisionContorl(void)
     arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
     arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
     arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
+
+    SuckerContorl();
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
 /**
@@ -262,7 +279,7 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.roll        = angle_ref[4];
     arm_cmd_send.lift        = angle_ref[5];
     // arm_cmd_send.up_flag     = 1;
-
+    SuckerContorl();
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 #endif
@@ -278,8 +295,7 @@ static void VideoControlSet(void)
     // 机械臂控制
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 5) {
         case 0:
-            // VideoKey();
-            VisionContorl();
+            VideoKey();
             break;
         case 1:
             VideoCustom();
