@@ -29,13 +29,13 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
     DMMotorSetSpeedRef(maximal_arm, 0.3);
 
     DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
-    DMMotorSetSpeedRef(minimal_arm, 0.5);
+    DMMotorSetSpeedRef(minimal_arm, 2);
 
     DMMotorSetRef(finesse, finesse->measure.position);
-    DMMotorSetSpeedRef(finesse, 0.5);
+    DMMotorSetSpeedRef(finesse, 2);
 
     DMMotorSetRef(pitch_arm, pitch_arm->measure.position);
-    DMMotorSetSpeedRef(pitch_arm, 0.5);
+    DMMotorSetSpeedRef(pitch_arm, 2);
 
     arm_sub = SubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_pub = PubRegister("arm_feed", sizeof(Arm_Upload_Data_s));

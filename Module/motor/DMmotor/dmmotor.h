@@ -10,10 +10,14 @@
 
 #define DM_P_MIN     (-12.5f)
 #define DM_P_MAX     12.5f
-#define DM_V_MIN     (-45.0f)
-#define DM_V_MAX     45.0f
-#define DM_T_MIN     (-18.0f)
-#define DM_T_MAX     18.0f
+#define DM_V_MIN     (-30.0f)
+#define DM_V_MAX     30.0f
+#define DM_T_MIN     (-10.0f)
+#define DM_T_MAX     10.0f
+#define DM_KP_MIN    0.0f
+#define DM_KP_MAX    500.0f
+#define DM_KD_MIN    0.0f
+#define DM_KD_MAX    5.0f
 
 typedef struct
 {

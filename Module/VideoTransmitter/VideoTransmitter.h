@@ -27,6 +27,8 @@ typedef struct
     float minimal_arm_target; // 小臂的目标值
     float finesse_target;     // 手腕的目标值
     float pitch_arm_target;   // pitch的目标值
+    float roll_arm_target;    // roll的目标值
+    float z_target;           // z轴的目标值
 } Custom_contorl_t;
 
 typedef struct

@@ -91,7 +91,7 @@ static void VideoRead(uint8_t *buff)
                             memcpy(&video_ctrl[TEMP].scd, &video_ctrl[TEMP].custom_data, 24);
                         } else {
                             memcpy(&video_ctrl[TEMP].custom_data, (buff + DATA_Offset + 1), LEN_custom_robot_data);
-                            memcpy(&video_ctrl[TEMP].cus, &video_ctrl[TEMP].custom_data, 16);
+                            memcpy(&video_ctrl[TEMP].cus, &video_ctrl[TEMP].custom_data, 24);
                         }
                         break;
                     case ID_remote_control_data: // 图传链路键鼠数据

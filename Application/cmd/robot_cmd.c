@@ -154,7 +154,8 @@ static void Recycle(void)
     // arm_cmd_send.lift = arm_fetch_data.height;
 }
 
-static void SuckerContorl(void){
+static void SuckerContorl(void)
+{
     switch (video_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
         case 1:
             arm_cmd_send.sucker_flag = 1;
@@ -327,9 +328,10 @@ static void VideoControlSet(void)
             break;
     }
 
-    chassis_cmd_send.vx                 = (video_data[TEMP].key[KEY_PRESS].a - video_data[TEMP].key[KEY_PRESS].d) * 2000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
-    chassis_cmd_send.vy                 = (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 2000 * chassis_cmd_send.chassis_speed_buff; // 系数待测                                                                                                         // test
-    chassis_cmd_send.wz                 = (float)video_data[TEMP].key_data.mouse_x * 10 + (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 500 * chassis_cmd_send.chassis_speed_buff;
+    chassis_cmd_send.vx = (video_data[TEMP].key[KEY_PRESS].a - video_data[TEMP].key[KEY_PRESS].d) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
+    chassis_cmd_send.vy = (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测                                                                                                         // test
+    chassis_cmd_send.wz = (float)video_data[TEMP].key_data.mouse_x * 10 +
+                          (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 26000 * chassis_cmd_send.chassis_speed_buff;
     chassis_cmd_send.chassis_speed_buff = 1; // test
 #endif
 }
