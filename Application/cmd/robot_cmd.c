@@ -227,6 +227,11 @@ static void VideoKey(void)
         arm_cmd_send.roll_flag = -1;
     else
         arm_cmd_send.roll_flag = 0;
+    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
+        arm_cmd_send.dm_state = DM_MOTOR_ERR;
+    } else {
+        arm_cmd_send.dm_state = DM_MOTOR_NO_ERR;
+    }
     SuckerContorl();
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }

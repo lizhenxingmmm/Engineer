@@ -150,6 +150,11 @@ typedef enum {
     ARM_AUTO_CONTORL,     // 自动控制
 } arm_mode_e;
 
+typedef enum {
+    DM_MOTOR_NO_ERR = 0,
+    DM_MOTOR_ERR,
+} dm_motor_mode_e;
+
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
 /**
  * @brief 对于双板情况,pc在云台,遥控器和裁判系统在底盘
@@ -185,6 +190,7 @@ typedef struct
     int8_t sucker_flag;
     arm_mode_e arm_mode;
     arm_mode_e arm_mode_last;
+    dm_motor_mode_e dm_state;
 } Arm_Ctrl_Cmd_s;
 
 // cmd发布的云台控制数据,由gimbal订阅

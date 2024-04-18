@@ -71,6 +71,12 @@ void DMMotorCaliEncoder(DM_MotorInstance *motor)
     DWT_Delay(0.1);
 }
 
+void DMMotorClearErr(DM_MotorInstance *motor)
+{
+    DMMotorSetMode(DM_CMD_CLEAR_ERROR, motor);
+    DWT_Delay(0.1);
+}
+
 static void DMMotorConfigModel(DM_MotorInstance *motor, CAN_Init_Config_s *config)
 {
     switch (motor->control_type) {
@@ -169,9 +175,9 @@ static void DMMotorMITContoroll(DM_MotorInstance *motor, float ref, DMMotor_Send
     LIMIT_MIN_MAX(ref, DM_P_MIN, DM_P_MAX);
     send->position_mit = float_to_uint(ref, DM_P_MIN, DM_P_MAX, 16);
     send->velocity_mit = float_to_uint(0, DM_V_MIN, DM_V_MAX, 12);
-    send->torque_des   = float_to_uint(0, DM_T_MIN, DM_T_MAX, 12);
-    send->Kp           = float_to_uint(2.f, DM_KP_MIN, DM_KP_MAX, 12);
+    send->Kp           = float_to_uint(150.f, DM_KP_MIN, DM_KP_MAX, 12);
     send->Kd           = float_to_uint(1.f, DM_KD_MIN, DM_KD_MAX, 12);
+    send->torque_des   = float_to_uint(0, DM_T_MIN, DM_T_MAX, 12);
 
     if (motor->stop_flag == MOTOR_STOP)
         send->torque_des = float_to_uint(0, DM_T_MIN, DM_T_MAX, 12);

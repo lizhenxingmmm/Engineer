@@ -81,5 +81,6 @@ void DMMotorEnable(DM_MotorInstance *motor);
 
 void DMMotorStop(DM_MotorInstance *motor);
 void DMMotorCaliEncoder(DM_MotorInstance *motor);
+void DMMotorClearErr(DM_MotorInstance *motor);
 void DMMotorControlInit();
 #endif // !DMMOTOR

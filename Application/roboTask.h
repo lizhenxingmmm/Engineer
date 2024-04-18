@@ -44,8 +44,8 @@ void StartUITASK(void const *argument);
  */
 void OSTaskInit(void)
 {
-    osThreadDef(instask, StartINSTASK, osPriorityRealtime, 0, 1024);
-    insTaskHandle = osThreadCreate(osThread(instask), NULL); // 由于是阻塞读取传感器,为姿态解算设置较高优先级,确保以1khz的频率执行
+//     osThreadDef(instask, StartINSTASK, osPriorityRealtime, 0, 1024);
+//     insTaskHandle = osThreadCreate(osThread(instask), NULL); // 由于是阻塞读取传感器,为姿态解算设置较高优先级,确保以1khz的频率执行
 
     osThreadDef(motortask, StartMOTORTASK, osPriorityNormal, 0, 512);
     motorTaskHandle = osThreadCreate(osThread(motortask), NULL);
@@ -60,22 +60,22 @@ void OSTaskInit(void)
     uiTaskHandle = osThreadCreate(osThread(uitask), NULL);
 }
 
-__attribute__((noreturn)) void StartINSTASK(void const *argument)
-{
-    static float ins_start;
-    static float ins_dt __attribute__((unused)); // for cancel warning
-    INS_Init();                                  // 确保BMI088被正确初始化.
-    for (;;) {
-        // 1kHz
-        ins_start = DWT_GetTimeline_ms();
-        INS_Task();
-        ins_dt = DWT_GetTimeline_ms() - ins_start;
-#if (defined(ONE_BOARD) || defined(GIMBAL_BOARD))
-        VisionSend(); // 解算完成后发送视觉数据,但是当前的实现不太优雅,后续若添加硬件触发需要重新考虑结构的组织
-#endif
-        osDelay(1);
-    }
-}
+// __attribute__((noreturn)) void StartINSTASK(void const *argument)
+// {
+//     static float ins_start;
+//     static float ins_dt __attribute__((unused)); // for cancel warning
+//     INS_Init();                                  // 确保BMI088被正确初始化.
+//     for (;;) {
+//         // 1kHz
+//         ins_start = DWT_GetTimeline_ms();
+//         INS_Task();
+//         ins_dt = DWT_GetTimeline_ms() - ins_start;
+// #if (defined(ONE_BOARD) || defined(GIMBAL_BOARD))
+//         VisionSend(); // 解算完成后发送视觉数据,但是当前的实现不太优雅,后续若添加硬件触发需要重新考虑结构的组织
+// #endif
+//         osDelay(1);
+//     }
+// }
 
 __attribute__((noreturn)) void StartMOTORTASK(void const *argument)
 {

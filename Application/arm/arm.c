@@ -26,7 +26,7 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
 {
     DMMotorControlInit();
     DMMotorSetRef(maximal_arm, maximal_arm->measure.position);
-    DMMotorSetSpeedRef(maximal_arm, 0.3);
+    DMMotorSetSpeedRef(maximal_arm, 0.4);
 
     DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
     DMMotorSetSpeedRef(minimal_arm, 2);
@@ -67,12 +67,14 @@ void ArmInit(void)
         },
         // 速度位置模式下不需要PID,喵老板真棒^^
         .control_type = MOTOR_CONTROL_POSITION_AND_SPEED,
-        .motor_type   = DM4310,
+        // .control_type = MOTOR_CONTROL_MIT,
+        .motor_type = DM4310,
     };
     maximal_arm = DMMotorInit(&motor_config);
 
     motor_config.can_init_config.rx_id = 0x04;
     motor_config.can_init_config.tx_id = 2;
+    motor_config.control_type          = MOTOR_CONTROL_POSITION_AND_SPEED;
     minimal_arm                        = DMMotorInit(&motor_config);
 
     motor_config.can_init_config.can_handle = &hcan2;
@@ -237,6 +239,14 @@ void ARMTask(void)
     } else {
         __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 1000);
     }
+
+    if (arm_cmd_recv.dm_state == DM_MOTOR_ERR) {
+        // DMMotorClearErr(maximal_arm);
+        // DMMotorClearErr(minimal_arm);
+        // DMMotorClearErr(finesse);
+        // DMMotorClearErr(pitch_arm);
+    }
+
     Height_Calculation();
 
     arm_feedback_data.maximal_arm = maximal_arm->measure.position;

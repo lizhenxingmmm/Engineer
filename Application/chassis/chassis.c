@@ -32,7 +32,7 @@ void ChassisInit()
         .can_init_config.can_handle   = &hcan2,
         .controller_param_init_config = {
             .speed_PID = {
-                .Kp            = 10,   // 4.5
+                .Kp            = 15,   // 4.5
                 .Ki            = 0,    // 0
                 .Kd            = 0.02, // 0
                 .IntegralLimit = 3000,
@@ -115,6 +115,11 @@ void ChassisTask()
         DJIMotorStop(motor_rf);
         DJIMotorStop(motor_lb);
         DJIMotorStop(motor_rb);
+        // DJIMotorSetRef(motor_lf, 0);
+        // DJIMotorSetRef(motor_rf, 0);
+        // DJIMotorSetRef(motor_lb, 0);
+        // DJIMotorSetRef(motor_rb, 0);
+        return;
     } else { // 正常工作
         DJIMotorEnable(motor_lf);
         DJIMotorEnable(motor_rf);
@@ -135,7 +140,7 @@ void ChassisTask()
     // 根据裁判系统的反馈数据和电容数据对输出限幅并设定闭环参考值
     LimitChassisOutput();
 
-    ui_data.ui_mode = chassis_cmd_recv.ui_mode;
+    ui_data.ui_mode      = chassis_cmd_recv.ui_mode;
     ui_data.chassis_mode = chassis_cmd_recv.chassis_mode;
 
     PubPushMessage(chassis_pub, &chassis_feedback_data);
