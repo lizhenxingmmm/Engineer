@@ -135,5 +135,8 @@ void ChassisTask()
     // 根据裁判系统的反馈数据和电容数据对输出限幅并设定闭环参考值
     LimitChassisOutput();
 
+    ui_data.ui_mode = chassis_cmd_recv.ui_mode;
+    ui_data.chassis_mode = chassis_cmd_recv.chassis_mode;
+
     PubPushMessage(chassis_pub, &chassis_feedback_data);
 }

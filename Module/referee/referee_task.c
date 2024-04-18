@@ -52,8 +52,6 @@ referee_info_t *UITaskInit(UART_HandleTypeDef *referee_usart_handle, Referee_Int
 
 void UITask()
 {
-    if (UI_REFRESH)
-        MyUIInit();
     MyUIRefresh(referee_recv_info, Interactive_data);
 }
 
@@ -65,6 +63,8 @@ static uint32_t shoot_line_location[10] = {540, 960, 490, 515, 565};
 
 void MyUIInit()
 {
+    if (Interactive_data->ui_mode == UI_KEEP)
+        return;
     if (!referee_recv_info->init_flag)
         vTaskDelete(NULL); // 如果没有初始化裁判系统则直接删除ui任务
     while (referee_recv_info->GameRobotState.robot_id == 0)

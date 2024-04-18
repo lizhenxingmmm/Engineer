@@ -144,8 +144,8 @@ static void Recycle(void)
 {
 
     arm_cmd_send.maximal_arm = -0.5589f;
-    arm_cmd_send.minimal_arm = 2.0130f;
-    arm_cmd_send.finesse     = 1.2939f;
+    arm_cmd_send.minimal_arm = 2.4730f;
+    arm_cmd_send.finesse     = 1.2339f;
     arm_cmd_send.pitch_arm   = 0.5509f;
     arm_cmd_send.lift        = -5;
     arm_cmd_send.up_flag     = 1;
@@ -179,16 +179,26 @@ static void VideoAutoGet(void)
     }
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
         case 0:
-            arm_cmd_send.maximal_arm = 0.f;
-            arm_cmd_send.minimal_arm = 0.f;
-            arm_cmd_send.finesse     = 0.f;
-            arm_cmd_send.pitch_arm   = 0.f;
+            Recycle();
             break;
         default:
-            Recycle();
+            arm_cmd_send.maximal_arm = 0.f;
+            arm_cmd_send.minimal_arm = -0.1771f;
+            arm_cmd_send.finesse     = -0.5460f;
+            arm_cmd_send.pitch_arm   = 0.696f;
             break;
     }
     SuckerContorl();
+
+    if (video_data[TEMP].key_data.left_button_down) {
+        arm_cmd_send.up_flag = 1;
+    } else if (video_data[TEMP].key_data.right_button_down) {
+        arm_cmd_send.up_flag = -1;
+    } else {
+        arm_cmd_send.up_flag = 0;
+    }
+    arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
+
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -227,14 +237,23 @@ static void VideoKey(void)
  */
 static void VideoCustom(void)
 {
-    arm_cmd_send.arm_mode    = ARM_HUM_CONTORL;
-    arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
-    arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
-    arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target;
-    arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
+    arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
+
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
+        case 0:
+            arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
+            arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
+            arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target;
+            arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
+            break;
+        default:
+            Recycle();
+            break;
+    }
+
+    SuckerContorl();
 
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
-    SuckerContorl();
 }
 
 /**
@@ -319,13 +338,23 @@ static void VideoControlSet(void)
     VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
 #endif
 #ifdef CHASSIS_BOARD
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 2) {
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 3) {
         case 0:
-            chassis_cmd_send.chassis_mode = CHASSIS_SLOW;
+            chassis_cmd_send.chassis_mode       = CHASSIS_FAST;
+            chassis_cmd_send.chassis_speed_buff = 1;
+            break;
+        case 1:
+            chassis_cmd_send.chassis_mode       = CHASSIS_SLOW;
+            chassis_cmd_send.chassis_speed_buff = 0.1;
             break;
         default:
             chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
             break;
+    }
+    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
+        chassis_cmd_send.ui_mode = UI_REFRESH;
+    } else {
+        chassis_cmd_send.ui_mode = UI_KEEP;
     }
 
     chassis_cmd_send.vx = (video_data[TEMP].key[KEY_PRESS].a - video_data[TEMP].key[KEY_PRESS].d) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测

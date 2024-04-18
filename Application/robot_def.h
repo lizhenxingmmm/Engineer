@@ -42,7 +42,7 @@
 #define MINARM_MAX  2.7f
 #define FINE_MIN    -1.6f
 #define FINE_MAX    1.9f
-#define PITCH_MIN   -0.8f
+#define PITCH_MIN   -0.9f
 #define PITCH_MAX   0.8f
 #define HEIGHT_MIN  -300.f
 #define HEIGHT_MAX  300.f // 50
@@ -164,8 +164,9 @@ typedef struct
     float wz;           // 旋转速度
     float offset_angle; // 底盘和归中位置的夹角
     chassis_mode_e chassis_mode;
-    int chassis_speed_buff;
+    float chassis_speed_buff;
     // UI部分
+    ui_mode_e ui_mode; //  UI状态
     //  ...
 
 } Chassis_Ctrl_Cmd_s;

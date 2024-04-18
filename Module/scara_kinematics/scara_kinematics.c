@@ -126,6 +126,7 @@ void GC_get_target_angles_slightly(slightly_controll_data data_pack, float resul
     scara_forward_kinematics(init_state.init_angle1, init_state.init_angle2, ARMLENGHT1, ARMLENGHT2, xy);
     xy[0] += data_pack.delta_x;
     xy[1] += data_pack.delta_y;
+    check_boundary_scara(xy[0], xy[1], xy);
     if (init_state.init_angle2 < 0) { handcoor = 2; } // 机械臂呈左手形状
     else {
         handcoor = 1;

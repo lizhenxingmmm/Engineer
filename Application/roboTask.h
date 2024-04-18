@@ -21,6 +21,7 @@
 #include "ins_task.h"
 #include "miniPC_process.h"
 #include "motor_task.h"
+#include "referee_task.h"
 
 #include "bsp_usart.h"
 #include "bsp_dwt.h"
@@ -29,11 +30,13 @@ osThreadId insTaskHandle;
 osThreadId motorTaskHandle;
 osThreadId robotTaskHandle;
 osThreadId daemonTaskHandle;
+osThreadId uiTaskHandle;
 
 void StartINSTASK(void const *argument);
 void StartMOTORTASK(void const *argument);
 void StartROBOTTASK(void const *argument);
 void StartDAEMONTASK(void const *argument);
+void StartUITASK(void const *argument);
 
 /**
  * @brief 初始化机器人RTOS任务，所有外加的RTOS任务都在这里初始化
@@ -52,6 +55,9 @@ void OSTaskInit(void)
 
     osThreadDef(daemontask, StartDAEMONTASK, osPriorityNormal, 0, 128);
     daemonTaskHandle = osThreadCreate(osThread(daemontask), NULL);
+
+    osThreadDef(uitask, StartUITASK, osPriorityNormal, 0, 512);
+    uiTaskHandle = osThreadCreate(osThread(uitask), NULL);
 }
 
 __attribute__((noreturn)) void StartINSTASK(void const *argument)
@@ -106,5 +112,14 @@ __attribute__((noreturn)) void StartDAEMONTASK(void const *argument)
         DaemonTask();
         daemon_dt = DWT_GetTimeline_ms() - daemon_start;
         osDelay(10);
+    }
+}
+
+__attribute__((noreturn)) void StartUITASK(void const *argument)
+{
+    for (;;) {
+        MyUIInit();
+        UITask();
+        osDelay(1); // 即使没有任何UI需要刷新,也挂起一次,防止卡在UITask中无法切换
     }
 }
