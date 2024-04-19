@@ -130,6 +130,7 @@ typedef struct
     PID_Init_Config_s current_PID;
     PID_Init_Config_s speed_PID;
     PID_Init_Config_s angle_PID;
+    PID_Init_Config_s dm_mit_PID; // MIT模式下的PID
 } Motor_Controller_Init_s;
 
 /* 用于初始化CAN电机的结构体,各类电机通用 */

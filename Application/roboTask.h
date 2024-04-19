@@ -22,6 +22,7 @@
 #include "miniPC_process.h"
 #include "motor_task.h"
 #include "referee_task.h"
+#include "dmmotor.h"
 
 #include "bsp_usart.h"
 #include "bsp_dwt.h"
@@ -32,7 +33,7 @@ osThreadId robotTaskHandle;
 osThreadId daemonTaskHandle;
 osThreadId uiTaskHandle;
 
-void StartINSTASK(void const *argument);
+// void StartINSTASK(void const *argument);
 void StartMOTORTASK(void const *argument);
 void StartROBOTTASK(void const *argument);
 void StartDAEMONTASK(void const *argument);
@@ -44,8 +45,8 @@ void StartUITASK(void const *argument);
  */
 void OSTaskInit(void)
 {
-//     osThreadDef(instask, StartINSTASK, osPriorityRealtime, 0, 1024);
-//     insTaskHandle = osThreadCreate(osThread(instask), NULL); // 由于是阻塞读取传感器,为姿态解算设置较高优先级,确保以1khz的频率执行
+    //     osThreadDef(instask, StartINSTASK, osPriorityRealtime, 0, 1024);
+    //     insTaskHandle = osThreadCreate(osThread(instask), NULL); // 由于是阻塞读取传感器,为姿态解算设置较高优先级,确保以1khz的频率执行
 
     osThreadDef(motortask, StartMOTORTASK, osPriorityNormal, 0, 512);
     motorTaskHandle = osThreadCreate(osThread(motortask), NULL);
@@ -58,6 +59,8 @@ void OSTaskInit(void)
 
     osThreadDef(uitask, StartUITASK, osPriorityNormal, 0, 512);
     uiTaskHandle = osThreadCreate(osThread(uitask), NULL);
+
+    DMMotorControlInit();
 }
 
 // __attribute__((noreturn)) void StartINSTASK(void const *argument)

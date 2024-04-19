@@ -85,12 +85,13 @@ typedef struct
 typedef struct
 {
     uint8_t header;
-    float maximal_arm; // 大臂的目标值
-    float minimal_arm; // 小臂的目标值
-    float z_height;    // 机械臂高度
-    float finesse;     // 手腕的目标值
-    float pitch_arm;   // pitch的目标值
-    float yaw;         // yaw的目标值,2006电机角度值
+    uint8_t is_tracking; // 是否追踪
+    float maximal_arm;   // 大臂的目标值
+    float minimal_arm;   // 小臂的目标值
+    float z_height;      // 机械臂高度
+    float finesse;       // 手腕的目标值
+    float pitch_arm;     // pitch的目标值
+    float yaw;           // yaw的目标值,2006电机角度值
 } Vision_Recv_s;
 
 /* stm32 -> minipc (发送结构体) */

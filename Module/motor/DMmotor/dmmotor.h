@@ -55,7 +55,10 @@ typedef struct
     float *speed_feedforward_ptr;
     float *current_feedforward_ptr;
     float pid_ref;
-    float speed_ref; // 位置速度模式下的速度参考
+    float speed_ref;   // 位置速度模式下的速度参考
+    /* MIT模式下PID */ // T_kef = mit_kp * (p_des - θ_m) + mit_kd * (v_des - dθ) + t_ff
+    float mit_kp;
+    float mit_kd; // ! kd = 0不能在kd = 0时，否则会出现震荡甚至失控 ！！！
     Motor_Controll_Type_e control_type;
     Motor_Working_Type_e stop_flag;
     CAN_Instance *motor_can_instace;

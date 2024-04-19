@@ -154,6 +154,24 @@ static void Recycle(void)
     // arm_cmd_send.lift = arm_fetch_data.height;
 }
 
+/**
+ * @brief 从车上取矿
+ *
+ */
+static void GetRockFromCar(void)
+{
+    arm_cmd_send.maximal_arm = 0.2824f;
+    arm_cmd_send.minimal_arm = 2.40f;
+    arm_cmd_send.finesse     = -0.0001f;
+    arm_cmd_send.pitch_arm   = -1.04f;
+    // arm_cmd_send.lift        = -5;
+    // arm_cmd_send.up_flag     = 1;
+}
+
+/**
+ * @brief 吸盘控制
+ *
+ */
 static void SuckerContorl(void)
 {
     switch (video_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
@@ -209,10 +227,21 @@ static void VideoAutoGet(void)
 static void VideoKey(void)
 {
     arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
-    arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
-    arm_cmd_send.minimal_arm += (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 0.003f;
-    arm_cmd_send.finesse += (video_data[TEMP].key[KEY_PRESS].z - video_data[TEMP].key[KEY_PRESS].c) * 0.003f;
-    arm_cmd_send.pitch_arm += (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 0.003f;
+    if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
+        ArmKeep();
+        video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] = 0; // 清零，确保每次都从初始状态开始
+    }
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
+        case 0:
+            arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
+            arm_cmd_send.minimal_arm += (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 0.003f;
+            arm_cmd_send.finesse += (video_data[TEMP].key[KEY_PRESS].z - video_data[TEMP].key[KEY_PRESS].c) * 0.003f;
+            arm_cmd_send.pitch_arm += (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 0.003f;
+            break;
+        default:
+            GetRockFromCar();
+            break;
+    }
     if (video_data[TEMP].key_data.left_button_down) {
         arm_cmd_send.up_flag = 1;
     } else if (video_data[TEMP].key_data.right_button_down) {
@@ -221,12 +250,17 @@ static void VideoKey(void)
         arm_cmd_send.up_flag = 0;
     }
     arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
-    if (video_data[TEMP].key[KEY_PRESS].f)
-        arm_cmd_send.roll_flag = 1;
-    else if (video_data[TEMP].key[KEY_PRESS].g)
+
+    if (video_data[TEMP].key[KEY_PRESS].f) {
         arm_cmd_send.roll_flag = -1;
-    else
+        arm_cmd_send.roll      = 60;
+    } else if (video_data[TEMP].key[KEY_PRESS].g) {
+        arm_cmd_send.roll_flag = 1;
+        arm_cmd_send.roll      = -60;
+    } else
         arm_cmd_send.roll_flag = 0;
+    // arm_cmd_send.roll = ((5.f * video_data[TEMP].key[KEY_PRESS].f) - (5.f * video_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
+
     if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
         arm_cmd_send.dm_state = DM_MOTOR_ERR;
     } else {
@@ -268,18 +302,40 @@ static void VideoCustom(void)
 static void VisionContorl(void)
 {
     arm_cmd_send.arm_mode = ARM_VISION_CONTROL;
+    if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
+        VisionSend(1);
+    }
     if (video_data[TEMP].key[KEY_PRESS].v) { // 按下V键向视觉发送数据
         VisionSend(1);
     } else {
         VisionSend(0);
     }
-
-    arm_cmd_send.maximal_arm = vision_ctrl->maximal_arm + MAXARM_ZERO;
-    arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
-    arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
-    arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
+    if (vision_ctrl->is_tracking) {
+        arm_cmd_send.maximal_arm = vision_ctrl->maximal_arm + MAXARM_ZERO;
+        arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
+        arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
+        arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
+    } else {
+        ArmKeep();
+    }
 
     SuckerContorl();
+
+    if (video_data[TEMP].key_data.left_button_down) {
+        arm_cmd_send.up_flag = 1;
+    } else if (video_data[TEMP].key_data.right_button_down) {
+        arm_cmd_send.up_flag = -1;
+    } else {
+        arm_cmd_send.up_flag = 0;
+    }
+    arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
+    if (video_data[TEMP].key[KEY_PRESS].f)
+        arm_cmd_send.roll_flag = 1;
+    else if (video_data[TEMP].key[KEY_PRESS].g)
+        arm_cmd_send.roll_flag = -1;
+    else
+        arm_cmd_send.roll_flag = 0;
+
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -341,6 +397,7 @@ static void VideoControlSet(void)
     VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
     VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
     VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
+    VAL_LIMIT(arm_cmd_send.roll, ROLL_MIN, ROLL_MAX);
 #endif
 #ifdef CHASSIS_BOARD
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 3) {

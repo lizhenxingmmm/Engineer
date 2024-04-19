@@ -9,6 +9,7 @@
 #include "bsp_dwt.h"
 // 大臂 -0.19 小臂 -0.79就寄啦？
 #define LIFT_OFFSET (-287.81269f)
+#define ROLL_OFFSET 35.07f
 
 // 图传链路 大臂零位maximal_arm -0.96 小臂零位minimal_arm 0.43 手腕零位 finesse 0.03 pitch_arm 零位 0.66
 static Publisher_t *arm_pub;  // 用于发布底盘的数据
@@ -20,22 +21,21 @@ static Arm_Upload_Data_s arm_feedback_data; // 从底盘接收的数据
 static DM_MotorInstance *maximal_arm, *minimal_arm, *finesse, *pitch_arm;
 static DJIMotor_Instance *lift, *roll;
 static int8_t is_init;
-static float roll_init_angle, lift_init_angle, height, lift_speed_feedfoward = 5.0f, lift_current_feedfoward = 1.f;
+static float roll_init_angle, roll_real, lift_init_angle, height, lift_speed_feedfoward = 5.0f, lift_current_feedfoward = 1.f;
 
 static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会回到原位，当然可以重新置零，但是工程的机械臂要限位？
 {
-    DMMotorControlInit();
     DMMotorSetRef(maximal_arm, maximal_arm->measure.position);
-    DMMotorSetSpeedRef(maximal_arm, 0.4);
+    DMMotorSetSpeedRef(maximal_arm, 0.3);
 
     DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
-    DMMotorSetSpeedRef(minimal_arm, 2);
+    DMMotorSetSpeedRef(minimal_arm, 1);
 
     DMMotorSetRef(finesse, finesse->measure.position);
-    DMMotorSetSpeedRef(finesse, 2);
+    DMMotorSetSpeedRef(finesse, 1.5);
 
     DMMotorSetRef(pitch_arm, pitch_arm->measure.position);
-    DMMotorSetSpeedRef(pitch_arm, 2);
+    DMMotorSetSpeedRef(pitch_arm, 1.5);
 
     arm_sub = SubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_pub = PubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
@@ -44,6 +44,11 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
 static void Height_Calculation(void)
 {
     height = -(lift->measure.total_angle - lift_init_angle) / LIFT_OFFSET;
+}
+
+static void Roll_Calculation(void)
+{
+    roll_real = (roll->measure.total_angle - roll_init_angle) / ROLL_OFFSET;
 }
 
 static void Sucker_Init(void)
@@ -65,10 +70,14 @@ void ArmInit(void)
             .rx_id      = 0x03, // Master ID 从3开始，因为发送id不能与接收id相同，
             .tx_id      = 1,    // MIT模式下为id，速度位置模式为0x100 + id
         },
+        .controller_param_init_config.dm_mit_PID = {
+            .Kp = 20, // 20
+            .Kd = 5,  // 达妙mit模式下的PID不需要Ki，千万不要kp = 0 && kd = 0
+        },
         // 速度位置模式下不需要PID,喵老板真棒^^
-        .control_type = MOTOR_CONTROL_POSITION_AND_SPEED,
-        // .control_type = MOTOR_CONTROL_MIT,
-        .motor_type = DM4310,
+        // .control_type = MOTOR_CONTROL_POSITION_AND_SPEED,
+        .control_type = MOTOR_CONTROL_MIT,
+        .motor_type   = DM8006,
     };
     maximal_arm = DMMotorInit(&motor_config);
 
@@ -166,9 +175,10 @@ void ArmInit(void)
                 .IntegralLimit = 10000,
                 .MaxOut        = 15000,
             },
+            .other_angle_feedback_ptr = &roll_real,
         },
         .controller_setting_init_config = {
-            .angle_feedback_source = MOTOR_FEED, .speed_feedback_source = MOTOR_FEED,
+            .angle_feedback_source = OTHER_FEED, .speed_feedback_source = MOTOR_FEED,
             .outer_loop_type    = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转
             .close_loop_type    = CURRENT_LOOP | SPEED_LOOP | ANGLE_LOOP,
             .motor_reverse_flag = MOTOR_DIRECTION_NORMAL, // ！！！ 只有在只对速度闭环时才能反向 ！！！
@@ -183,10 +193,13 @@ void ArmInit(void)
 // 机械行程 87063度
 // 读角度时init角度应位于最高点 init角度对应350mm 最低点为init角度-87063 对应0mm
 // (48733.0234 + 195.158646) / 17.00 = OFFSET
+
+// roll init 2066.6
+// 360度后 14692.2
+// roll_offset = (roll - roll_init) * 360 =
 void ARMTask(void)
 {
     if (!is_init) {
-        DMMotorControlInit();
         ArmDMInit();
         roll_init_angle = roll->measure.total_angle; // min = -3460 - 165 max =4973 - 165
         lift_init_angle = lift->measure.total_angle;
@@ -229,8 +242,19 @@ void ARMTask(void)
     }
 
     if (arm_cmd_recv.roll_flag != 0) {
-        DJIMotorSetRef(roll, 2500 * arm_cmd_recv.roll_flag);
+        // DJIMotorOuterLoop(roll, ANGLE_LOOP);
+        // DJIMotorSetRef(roll, arm_cmd_recv.roll);
+        if (arm_cmd_recv.roll - roll_real > 2) {
+            DJIMotorSetRef(roll, 2500);
+        } else if (arm_cmd_recv.roll - roll_real < -2) {
+            DJIMotorSetRef(roll, -2500);
+        } else {
+            DJIMotorSetRef(roll, 0);
+        }
+        // DJIMotorSetRef(roll, 2500 * arm_cmd_recv.roll_flag);
     } else {
+        // DJIMotorOuterLoop(roll, ANGLE_LOOP);
+        // DJIMotorSetRef(roll, roll_real);
         DJIMotorSetRef(roll, 0);
     }
 
@@ -248,12 +272,13 @@ void ARMTask(void)
     }
 
     Height_Calculation();
+    Roll_Calculation();
 
     arm_feedback_data.maximal_arm = maximal_arm->measure.position;
     arm_feedback_data.minimal_arm = minimal_arm->measure.position;
     arm_feedback_data.finesse     = finesse->measure.position;
     arm_feedback_data.pitch_arm   = pitch_arm->measure.position;
     arm_feedback_data.height      = height;
-    arm_feedback_data.roll        = roll->measure.total_angle;
+    arm_feedback_data.roll        = roll_real;
     PubPushMessage(arm_pub, &arm_feedback_data);
 }

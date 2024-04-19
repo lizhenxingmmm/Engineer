@@ -42,10 +42,12 @@
 #define MINARM_MAX  2.7f
 #define FINE_MIN    -1.6f
 #define FINE_MAX    1.9f
-#define PITCH_MIN   -0.9f
+#define PITCH_MIN   -1.05f
 #define PITCH_MAX   0.8f
 #define HEIGHT_MIN  -300.f
 #define HEIGHT_MAX  300.f // 50
+#define ROLL_MIN    -180.f
+#define ROLL_MAX    180.f
 
 // 检查是否出现主控板定义冲突,只允许一个开发板定义存在,否则编译会自动报错
 #if (defined(ONE_BOARD) && defined(CHASSIS_BOARD)) || \
