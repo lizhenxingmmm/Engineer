@@ -25,7 +25,7 @@ static void RecvProcess(Vision_Recv_s *recv, uint8_t *rx_buff)
     // memcpy(&recv->pitch_arm, rx_buff + 17, 4);
     // memcpy(&recv->yaw, rx_buff + 21, 4);
 
-    memcpy(&recv->maximal_arm, rx_buff + 1, sizeof(Vision_Recv_s) - 1); /* 从第二个字节开始拷贝 */
+    memcpy(&recv->is_tracking, rx_buff + 1, sizeof(Vision_Recv_s) - 1); /* 从第二个字节开始拷贝 */
 }
 
 /**

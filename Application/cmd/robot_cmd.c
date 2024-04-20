@@ -166,6 +166,10 @@ static void GetRockFromCar(void)
     arm_cmd_send.pitch_arm   = -1.04f;
     // arm_cmd_send.lift        = -5;
     // arm_cmd_send.up_flag     = 1;
+    arm_cmd_send.lift = -video_data[TEMP].cus.height + arm_fetch_data.height;
+    arm_cmd_send.roll = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
+    arm_cmd_send.up_flag   = 1;
+    arm_cmd_send.roll_flag = 1;
 }
 
 /**
@@ -253,10 +257,10 @@ static void VideoKey(void)
 
     if (video_data[TEMP].key[KEY_PRESS].f) {
         arm_cmd_send.roll_flag = -1;
-        arm_cmd_send.roll      = 60;
+        arm_cmd_send.roll      = -20;
     } else if (video_data[TEMP].key[KEY_PRESS].g) {
         arm_cmd_send.roll_flag = 1;
-        arm_cmd_send.roll      = -60;
+        arm_cmd_send.roll      = 20;
     } else
         arm_cmd_send.roll_flag = 0;
     // arm_cmd_send.roll = ((5.f * video_data[TEMP].key[KEY_PRESS].f) - (5.f * video_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
@@ -277,16 +281,24 @@ static void VideoKey(void)
 static void VideoCustom(void)
 {
     arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
+    if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
+        ArmKeep();
+        video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] = 0; // 清零，确保每次都从初始状态开始
+    }
 
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
         case 0:
             arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
             arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
-            arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target;
+            arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target * 2;
             arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
+            arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
+            arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
+            arm_cmd_send.up_flag     = 1;
+            arm_cmd_send.roll_flag   = 1;
             break;
         default:
-            Recycle();
+            GetRockFromCar();
             break;
     }
 
@@ -335,7 +347,7 @@ static void VisionContorl(void)
         arm_cmd_send.roll_flag = -1;
     else
         arm_cmd_send.roll_flag = 0;
-
+    arm_cmd_send.roll          = arm_fetch_data.roll + 5 * (video_data[TEMP].key[KEY_PRESS].f - video_data[TEMP].key[KEY_PRESS].g);
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -357,9 +369,11 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.minimal_arm = angle_ref[1];
     arm_cmd_send.finesse     = angle_ref[2];
     arm_cmd_send.pitch_arm   = angle_ref[3];
-    arm_cmd_send.roll        = angle_ref[4];
-    arm_cmd_send.lift        = angle_ref[5];
-    // arm_cmd_send.up_flag     = 1;
+    // arm_cmd_send.roll        = angle_ref[4];
+    // arm_cmd_send.lift        = angle_ref[5];
+    arm_cmd_send.lift += video_data[TEMP].cus.height;
+    // arm_cmd_send.roll += video_data[TEMP].cus.roll_arm_target;
+    arm_cmd_send.up_flag = 1;
     SuckerContorl();
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
@@ -374,23 +388,28 @@ static void VideoControlSet(void)
     // 直接测试，稍后会添加到函数中
 #ifdef ARM_BOARD
     // 机械臂控制
+    // if (video_data[TEMP].custom_control_mode == 0) {
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 5) {
         case 0:
-            VideoKey();
+            VideoKey(); // 键盘控制
             break;
         case 1:
-            VideoCustom();
+            VideoCustom(); // 自定义控制器
             break;
         case 2:
-            VisionContorl();
+            VisionContorl(); // 视觉控制
             break;
         case 3:
-            VideoSlightlyContorl();
+            VideoSlightlyContorl(); // 轻微控制器
             break;
         default:
-            VideoAutoGet();
+            VideoAutoGet(); // 一键取矿
             break;
     }
+    // } else {
+    //     // 接收到自定义控制器命令，转为自定义控制器拨杆切换模式
+    //     // code ...
+    // }
 
     VAL_LIMIT(arm_cmd_send.maximal_arm, MAXARM_MIN, MAXARM_MAX);
     VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);

@@ -29,7 +29,7 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
     DMMotorSetSpeedRef(maximal_arm, 0.3);
 
     DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
-    DMMotorSetSpeedRef(minimal_arm, 1);
+    DMMotorSetSpeedRef(minimal_arm, 1.5);
 
     DMMotorSetRef(finesse, finesse->measure.position);
     DMMotorSetSpeedRef(finesse, 1.5);
@@ -71,8 +71,8 @@ void ArmInit(void)
             .tx_id      = 1,    // MIT模式下为id，速度位置模式为0x100 + id
         },
         .controller_param_init_config.dm_mit_PID = {
-            .Kp = 20, // 20
-            .Kd = 5,  // 达妙mit模式下的PID不需要Ki，千万不要kp = 0 && kd = 0
+            .Kp = 12,  // 20
+            .Kd = 2.8, // 达妙mit模式下的PID不需要Ki，千万不要kp = 0 && kd = 0
         },
         // 速度位置模式下不需要PID,喵老板真棒^^
         // .control_type = MOTOR_CONTROL_POSITION_AND_SPEED,
@@ -84,15 +84,18 @@ void ArmInit(void)
     motor_config.can_init_config.rx_id = 0x04;
     motor_config.can_init_config.tx_id = 2;
     motor_config.control_type          = MOTOR_CONTROL_POSITION_AND_SPEED;
+    motor_config.motor_type            = DM6006;
     minimal_arm                        = DMMotorInit(&motor_config);
 
     motor_config.can_init_config.can_handle = &hcan2;
     motor_config.can_init_config.rx_id      = 0x03;
     motor_config.can_init_config.tx_id      = 1;
+    motor_config.motor_type                 = DM4310;
     finesse                                 = DMMotorInit(&motor_config);
 
     motor_config.can_init_config.rx_id = 0x04;
     motor_config.can_init_config.tx_id = 2;
+    motor_config.motor_type            = DM4310;
     pitch_arm                          = DMMotorInit(&motor_config);
 
     Motor_Init_Config_s lift_config = {
@@ -151,25 +154,26 @@ void ArmInit(void)
         },
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp                = 10,
-                .Ki                = 0,
+                .Kp                = 90,
+                .Ki                = 1,
                 .Kd                = 0,
                 .Improve           = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement | PID_DerivativeFilter | PID_ErrorHandle,
                 .IntegralLimit     = 10000,
                 .MaxOut            = 15000,
-                .Derivative_LPF_RC = 0.01,
+                .Derivative_LPF_RC = 0.01f,
+                .DeadBand          = 1,
             },
             .speed_PID = {
-                .Kp            = 2,   // 10
-                .Ki            = 0.1, // 1
-                .Kd            = 0.002,
+                .Kp            = 1,  // 10
+                .Ki            = 60, // 1
+                .Kd            = 0.001f,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 10000,
                 .MaxOut        = 15000,
             },
             .current_PID = {
-                .Kp            = 1.5,  // 0.7
-                .Ki            = 0.02, // 0.1
+                .Kp            = 1.5f,  // 0.7
+                .Ki            = 0.02f, // 0.1
                 .Kd            = 0,
                 .Improve       = PID_Integral_Limit,
                 .IntegralLimit = 10000,
@@ -242,20 +246,20 @@ void ARMTask(void)
     }
 
     if (arm_cmd_recv.roll_flag != 0) {
-        // DJIMotorOuterLoop(roll, ANGLE_LOOP);
-        // DJIMotorSetRef(roll, arm_cmd_recv.roll);
-        if (arm_cmd_recv.roll - roll_real > 2) {
-            DJIMotorSetRef(roll, 2500);
-        } else if (arm_cmd_recv.roll - roll_real < -2) {
-            DJIMotorSetRef(roll, -2500);
-        } else {
-            DJIMotorSetRef(roll, 0);
-        }
+        DJIMotorOuterLoop(roll, ANGLE_LOOP);
+        DJIMotorSetRef(roll, arm_cmd_recv.roll);
+        // if (arm_cmd_recv.roll - roll_real > 2) {
+        //     DJIMotorSetRef(roll, 8000);
+        // } else if (arm_cmd_recv.roll - roll_real < -2) {
+        //     DJIMotorSetRef(roll, -8000);
+        // } else {
+        //     DJIMotorSetRef(roll, 0);
+        // }
         // DJIMotorSetRef(roll, 2500 * arm_cmd_recv.roll_flag);
     } else {
-        // DJIMotorOuterLoop(roll, ANGLE_LOOP);
-        // DJIMotorSetRef(roll, roll_real);
-        DJIMotorSetRef(roll, 0);
+        DJIMotorOuterLoop(roll, ANGLE_LOOP);
+        DJIMotorSetRef(roll, roll_real);
+        // DJIMotorSetRef(roll, 0);
     }
 
     if (arm_cmd_recv.sucker_flag) {

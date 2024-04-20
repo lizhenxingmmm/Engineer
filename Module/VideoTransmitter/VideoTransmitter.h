@@ -28,7 +28,7 @@ typedef struct
     float finesse_target;     // 手腕的目标值
     float pitch_arm_target;   // pitch的目标值
     float roll_arm_target;    // roll的目标值
-    float z_target;           // z轴的目标值
+    float height;           // z轴的目标值
 } Custom_contorl_t;
 
 typedef struct
@@ -46,6 +46,7 @@ typedef struct
     xFrameHeader FrameHeader;        // 接收到的帧头信息
     uint16_t CmdID;                  // 命令码
     custom_robot_data_t custom_data; // 自定义数据
+    uint8_t custom_control_mode;     // 自定义控制模式
     Custom_contorl_t cus;            // 解算后的自定义数据
     slightly_controll_data scd;      // 轻微控制数据
     remote_control_t key_data;       // 遥控器数据
