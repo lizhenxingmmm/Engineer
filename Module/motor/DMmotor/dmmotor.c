@@ -122,7 +122,13 @@ DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
     motor->other_speed_feedback_ptr = config->controller_param_init_config.other_speed_feedback_ptr;
     motor->mit_kp                   = config->controller_param_init_config.dm_mit_PID.Kp;
     motor->mit_kd                   = config->controller_param_init_config.dm_mit_PID.Kd;
-    motor->control_type             = config->control_type;
+
+    if (motor->mit_kp != 0 && motor->mit_kd == 0) {
+        while (1) // 进入死循环，请进行安全检查
+            ;     // kd = 0不能在kd = 0时，否则会出现震荡甚至失控 ！！！
+    }
+
+    motor->control_type = config->control_type;
     DMMotorConfigModel(motor, &config->can_init_config);
     config->can_init_config.can_module_callback = DMMotorDecode;
     config->can_init_config.id                  = motor;
