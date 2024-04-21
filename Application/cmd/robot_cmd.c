@@ -166,10 +166,22 @@ static void GetRockFromCar(void)
     arm_cmd_send.pitch_arm   = -1.04f;
     // arm_cmd_send.lift        = -5;
     // arm_cmd_send.up_flag     = 1;
-    arm_cmd_send.lift = -video_data[TEMP].cus.height + arm_fetch_data.height;
-    arm_cmd_send.roll = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
+    arm_cmd_send.lift      = -video_data[TEMP].cus.height + arm_fetch_data.height;
+    arm_cmd_send.roll      = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
     arm_cmd_send.up_flag   = 1;
     arm_cmd_send.roll_flag = 1;
+}
+
+static void DebugModeControl(void)
+{
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_D] % 2) {
+        case 0:
+            arm_cmd_send.download_mode = DOWNLOAD_OFF;
+            break;
+        default:
+            arm_cmd_send.download_mode = DOWNLOAD_ON;
+            break;
+    }
 }
 
 /**
@@ -265,11 +277,7 @@ static void VideoKey(void)
         arm_cmd_send.roll_flag = 0;
     // arm_cmd_send.roll = ((5.f * video_data[TEMP].key[KEY_PRESS].f) - (5.f * video_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
 
-    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
-        arm_cmd_send.dm_state = DM_MOTOR_ERR;
-    } else {
-        arm_cmd_send.dm_state = DM_MOTOR_NO_ERR;
-    }
+    DebugModeControl();
     SuckerContorl();
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }

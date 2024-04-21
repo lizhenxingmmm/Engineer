@@ -115,10 +115,6 @@ void ChassisTask()
         DJIMotorStop(motor_rf);
         DJIMotorStop(motor_lb);
         DJIMotorStop(motor_rb);
-        // DJIMotorSetRef(motor_lf, 0);
-        // DJIMotorSetRef(motor_rf, 0);
-        // DJIMotorSetRef(motor_lb, 0);
-        // DJIMotorSetRef(motor_rb, 0);
         return;
     } else { // 正常工作
         DJIMotorEnable(motor_lf);

@@ -268,11 +268,12 @@ void ARMTask(void)
         __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 1000);
     }
 
-    if (arm_cmd_recv.dm_state == DM_MOTOR_ERR) {
-        // DMMotorClearErr(maximal_arm);
-        // DMMotorClearErr(minimal_arm);
-        // DMMotorClearErr(finesse);
-        // DMMotorClearErr(pitch_arm);
+    if (arm_cmd_recv.download_mode == DOWNLOAD_ON) {
+        DJIMotorStop(lift);
+        DJIMotorStop(roll);
+    } else {
+        DJIMotorEnable(lift);
+        DJIMotorEnable(roll);
     }
 
     Height_Calculation();

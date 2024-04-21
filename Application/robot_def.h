@@ -40,7 +40,7 @@
 #define MAXARM_MAX  0.74f
 #define MINARM_MIN  -1.9f
 #define MINARM_MAX  2.7f
-#define FINE_MIN    -2.5f
+#define FINE_MIN    -2.1f
 #define FINE_MAX    1.9f
 #define PITCH_MIN   -1.05f
 #define PITCH_MAX   0.8f
@@ -153,9 +153,9 @@ typedef enum {
 } arm_mode_e;
 
 typedef enum {
-    DM_MOTOR_NO_ERR = 0,
-    DM_MOTOR_ERR,
-} dm_motor_mode_e;
+    DOWNLOAD_OFF = 0, // 关闭调试模式
+    DOWNLOAD_ON,      // 开启调试模式,用于控制大疆电机的调试，防止下载时电机转动
+} download_mode_e;
 
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
 /**
@@ -173,7 +173,8 @@ typedef struct
     chassis_mode_e chassis_mode;
     float chassis_speed_buff;
     // UI部分
-    ui_mode_e ui_mode; //  UI状态
+    ui_mode_e ui_mode;   //  UI状态
+    arm_mode_e arm_mode; // 机械臂状态
     //  ...
 
 } Chassis_Ctrl_Cmd_s;
@@ -192,7 +193,7 @@ typedef struct
     int8_t sucker_flag;
     arm_mode_e arm_mode;
     arm_mode_e arm_mode_last;
-    dm_motor_mode_e dm_state;
+    download_mode_e download_mode;
 } Arm_Ctrl_Cmd_s;
 
 // cmd发布的云台控制数据,由gimbal订阅
