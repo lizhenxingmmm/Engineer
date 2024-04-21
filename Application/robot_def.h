@@ -40,7 +40,7 @@
 #define MAXARM_MAX  0.74f
 #define MINARM_MIN  -1.9f
 #define MINARM_MAX  2.7f
-#define FINE_MIN    -2.1f
+#define FINE_MIN    -1.6f
 #define FINE_MAX    1.9f
 #define PITCH_MIN   -1.05f
 #define PITCH_MAX   0.8f

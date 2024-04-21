@@ -28,22 +28,19 @@
 #ifdef CHASSIS_BOARD
 static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
 static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
-
-static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信息,包括控制信息和UI绘制相关
-static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
 #endif
 #ifdef ARM_BOARD
 static Publisher_t *arm_cmd_pub;   // 底盘控制消息发布者
 static Subscriber_t *arm_feed_sub; // 底盘反馈信息订阅者
 
-static Arm_Ctrl_Cmd_s arm_cmd_send;      // 发送给机械臂的信息
-static Arm_Upload_Data_s arm_fetch_data; // 从机械臂接受的反馈信息
-static Vision_Recv_s *vision_ctrl;       // 视觉控制信息
+static Vision_Recv_s *vision_ctrl; // 视觉控制信息
 #endif
-
-static void
-RemoteControlSet(void);            // 遥控器控制量设置
-static void VideoControlSet(void); // 图传链路控制量设置
+static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信息,包括控制信息和UI绘制相关
+static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
+static Arm_Ctrl_Cmd_s arm_cmd_send;              // 发送给机械臂的信息
+static Arm_Upload_Data_s arm_fetch_data;         // 从机械臂接受的反馈信息
+static void RemoteControlSet(void);              // 遥控器控制量设置
+static void VideoControlSet(void);               // 图传链路控制量设置
 static void EmergencyHandler(void);
 static RC_ctrl_t *rc_data;       // 遥控器数据指针,初始化时返回
 static Video_ctrl_t *video_data; // 视觉数据指针,初始化时返回
@@ -96,7 +93,8 @@ void RobotCMDTask(void)
     else if (switch_is_up(rc_data[TEMP].rc.switch_right))
         EmergencyHandler();
 
-        // 发送控制信息
+    // 发送控制信息
+    chassis_cmd_send.arm_mode = arm_cmd_send.arm_mode;
 #ifdef ARM_BOARD
     // 发送给机械臂
     PubPushMessage(arm_cmd_pub, &arm_cmd_send);
@@ -269,13 +267,11 @@ static void VideoKey(void)
 
     if (video_data[TEMP].key[KEY_PRESS].f) {
         arm_cmd_send.roll_flag = -1;
-        arm_cmd_send.roll      = -20;
     } else if (video_data[TEMP].key[KEY_PRESS].g) {
         arm_cmd_send.roll_flag = 1;
-        arm_cmd_send.roll      = 20;
     } else
         arm_cmd_send.roll_flag = 0;
-    // arm_cmd_send.roll = ((5.f * video_data[TEMP].key[KEY_PRESS].f) - (5.f * video_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
+    arm_cmd_send.roll = ((10.f * video_data[TEMP].key[KEY_PRESS].f) - (10.f * video_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
 
     DebugModeControl();
     SuckerContorl();
@@ -294,19 +290,35 @@ static void VideoCustom(void)
         video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] = 0; // 清零，确保每次都从初始状态开始
     }
 
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3) {
         case 0:
             arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
             arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
-            arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target * 2;
+            arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target * 1.2;
             arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
             arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
-            arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
+            arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 5;
             arm_cmd_send.up_flag     = 1;
             arm_cmd_send.roll_flag   = 1;
             break;
-        default:
+        case 1:
             GetRockFromCar();
+            break;
+        default:
+            // -1.08
+            // 2.28
+            // 1.29
+            // -1.05
+            arm_cmd_send.maximal_arm = -1.08f;
+            arm_cmd_send.minimal_arm = 2.28f;
+            arm_cmd_send.finesse     = 1.29f;
+            arm_cmd_send.pitch_arm   = -1.04f;
+            // arm_cmd_send.lift        = -5;
+            // arm_cmd_send.up_flag     = 1;
+            arm_cmd_send.lift      = -video_data[TEMP].cus.height + arm_fetch_data.height;
+            arm_cmd_send.roll      = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
+            arm_cmd_send.up_flag   = 1;
+            arm_cmd_send.roll_flag = 1;
             break;
     }
 
@@ -425,6 +437,13 @@ static void VideoControlSet(void)
     VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
     VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
     VAL_LIMIT(arm_cmd_send.roll, ROLL_MIN, ROLL_MAX);
+
+    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
+        chassis_cmd_send.ui_mode = UI_REFRESH;
+    } else {
+        chassis_cmd_send.ui_mode = UI_KEEP;
+    }
+
 #endif
 #ifdef CHASSIS_BOARD
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 3) {
