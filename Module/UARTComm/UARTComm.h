@@ -30,15 +30,12 @@ typedef struct
     uint8_t send_buf_len;                                                // 发送缓冲区长度,为发送数据长度+帧头单包数据长度帧尾以及校验和(4)
     uint8_t raw_sendbuf[UARTCOMM_MAX_BUFF_SIZE + UARTCOMM_OFFSET_BYTES]; // 额外4个bytes保存帧头帧尾和校验和
     /* 接收部分 */
-    uint8_t recv_data_len;                                               // 接收数据长度
-    uint8_t recv_buf_len;                                                // 接收缓冲区长度,为接收数据长度+帧头单包数据长度帧尾以及校验和(4)
-    uint8_t raw_recvbuf[UARTCOMM_MAX_BUFF_SIZE + UARTCOMM_OFFSET_BYTES]; // 额外4个bytes保存帧头帧尾和校验和
-    uint8_t unpacked_recv_data[UARTCOMM_MAX_BUFF_SIZE];                  // 解包后的数据,调用UARTCommGet()后cast成对应的类型通过指针读取即可
+    uint8_t recv_data_len;                              // 接收数据长度
+    uint8_t recv_buf_len;                               // 接收缓冲区长度,为接收数据长度+帧头单包数据长度帧尾以及校验和(4)
+    uint8_t unpacked_recv_data[UARTCOMM_MAX_BUFF_SIZE]; // 解包后的数据,调用UARTCommGet()后cast成对应的类型通过指针读取即可
     /* 接收和更新标志位*/
     uint8_t recv_state;   // 接收状态,
-    uint8_t cur_recv_len; // 当前已经接收到的数据长度(包括帧头帧尾datalen和校验和)
-    uint8_t update_flag;  // 数据更新标志位,当接收到新数据时,会将此标志位置1,调用CANCommGet()后会将此标志位置0
-
+        
     Daemon_Instance *ucomm_daemon; // 守护进程
 } UARTComm_Instance;
 #pragma pack()
@@ -52,5 +49,29 @@ typedef struct
 
     uint16_t daemon_counter; // 守护进程计数器
 } UARTComm_Init_Config_s;
+
+/**
+ * @brief 初始化UART comm
+ *
+ * @param config UART comm初始化结构体
+ * @return UARTComm_Instance* UART comm实例指针
+ */
+UARTComm_Instance *UARTCommInit(UARTComm_Init_Config_s *config);
+
+/**
+ * @brief 发送数据
+ *
+ * @param ins UART comm实例
+ * @param send_data 发送数据
+ */
+void UARTCommSend(UARTComm_Instance *ins, uint8_t *send_data);
+
+/**
+ * @brief 发送数据
+ *
+ * @param ins UART comm实例
+ * @param send_data 发送数据
+ */
+void *UARTCommGet(UARTComm_Instance *instance);
 
 #endif // UARTCOMM_H

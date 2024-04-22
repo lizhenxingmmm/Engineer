@@ -10,14 +10,18 @@
 #include "bsp_dwt.h"
 #include "arm_math.h"
 
+#ifdef CHASSIS_BOARD
+#include "UARTComm.h"
+static UARTComm_Instance *chassis_usart_comm;
+#endif // CHASSIS_BOARD
+#ifdef ONE_BOARD
 static Publisher_t *chassis_pub;  // 用于发布底盘的数据
 static Subscriber_t *chassis_sub; // 用于订阅底盘的控制命令
-
+#endif
 static Chassis_Ctrl_Cmd_s chassis_cmd_recv;         // 底盘接收到的控制命令
 static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数据
-
-static referee_info_t *referee_data;       // 用于获取裁判系统的数据
-static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
+static referee_info_t *referee_data;                // 用于获取裁判系统的数据
+static Referee_Interactive_info_t ui_data;          // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
 
 static DJIMotor_Instance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 
@@ -74,9 +78,20 @@ void ChassisInit()
     motor_rb                                                               = DJIMotorInit(&chassis_motor_config);
 
     referee_data = UITaskInit(&huart6, &ui_data); // 裁判系统初始化,会同时初始化UI
+#ifdef CHASSIS_BOARD
+    UARTComm_Init_Config_s chassis_usart_config = {
+        .uart_handle    = &huart1,
+        .recv_data_len  = sizeof(Chassis_Ctrl_Cmd_s),
+        .send_data_len  = sizeof(Chassis_Upload_Data_s),
+        .daemon_counter = 30,
+    };
+    chassis_usart_comm = UARTCommInit(&chassis_usart_config);
+#endif // CHASSIS_BOARD
 
+#ifdef ONE_BOARD // 单板控制整车,则通过pubsub来传递消息
     chassis_sub = SubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
     chassis_pub = PubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
+#endif // ONE_BOARD
 }
 
 /**
@@ -109,7 +124,12 @@ static void LimitChassisOutput()
 /* 机器人底盘控制核心任务 */
 void ChassisTask()
 {
+#ifdef ONE_BOARD
     SubGetMessage(chassis_sub, &chassis_cmd_recv);
+#endif
+#ifdef CHASSIS_BOARD
+    chassis_cmd_recv = *(Chassis_Ctrl_Cmd_s *)UARTCommGet(chassis_usart_comm);
+#endif                                                         // CHASSIS_BOARD
     if (chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE) { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
         DJIMotorStop(motor_lf);
         DJIMotorStop(motor_rf);
@@ -137,6 +157,10 @@ void ChassisTask()
 
     ui_data.ui_mode      = chassis_cmd_recv.ui_mode;
     ui_data.chassis_mode = chassis_cmd_recv.chassis_mode;
-
+#ifdef CHASSIS_BOARD
+    UARTCommSend(chassis_usart_comm, (void *)&chassis_feedback_data);
+#endif
+#ifdef ONE_BOARD
     PubPushMessage(chassis_pub, &chassis_feedback_data);
+#endif
 }

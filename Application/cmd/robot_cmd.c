@@ -25,15 +25,16 @@
 #include "referee_protocol.h"
 #include "scara_kinematics.h"
 #include "arm_math.h"
+#include "UARTComm.h"
 #ifdef CHASSIS_BOARD
 static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
 static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
 #endif
 #ifdef ARM_BOARD
-static Publisher_t *arm_cmd_pub;   // 底盘控制消息发布者
-static Subscriber_t *arm_feed_sub; // 底盘反馈信息订阅者
-
-static Vision_Recv_s *vision_ctrl; // 视觉控制信息
+static Publisher_t *arm_cmd_pub;         // 底盘控制消息发布者
+static Subscriber_t *arm_feed_sub;       // 底盘反馈信息订阅者
+static Vision_Recv_s *vision_ctrl;       // 视觉控制信息
+static UARTComm_Instance *cmd_uart_comm; // 双板通信
 #endif
 static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信息,包括控制信息和UI绘制相关
 static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
@@ -54,9 +55,16 @@ static Video_ctrl_t *video_data; // 视觉数据指针,初始化时返回
 void RobotCMDInit(void)
 {
 #ifdef ARM_BOARD
-    video_data  = VideoTransmitterControlInit(&huart6); // 初始化图传链路
-    rc_data     = RemoteControlInit(&huart1);           // 初始化遥控器,C板上使用USART1
-    vision_ctrl = VisionInit(&huart3);                  // 初始化视觉控制
+    UARTComm_Init_Config_s ucomm_config = {
+        .uart_handle    = &huart1,
+        .recv_data_len  = sizeof(Chassis_Upload_Data_s),
+        .send_data_len  = sizeof(Chassis_Ctrl_Cmd_s),
+        .daemon_counter = 10,
+    };
+    cmd_uart_comm = UARTCommInit(&ucomm_config);
+    video_data = VideoTransmitterControlInit(&huart6); // 初始化图传链路
+    rc_data     = RemoteControlInit(&huart3);           // 初始化遥控器,C板上使用USART1
+    vision_ctrl = VisionInit(&huart3); // 初始化视觉控制
 
     arm_cmd_pub  = PubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_feed_sub = SubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
@@ -84,6 +92,7 @@ void RobotCMDTask(void)
 #ifdef ARM_BOARD
     // 获取机械臂反馈信息
     SubGetMessage(arm_feed_sub, &arm_fetch_data);
+    chassis_fetch_data = *(Chassis_Upload_Data_s *)UARTCommGet(cmd_uart_comm);
 #endif
     if (!rc_data[TEMP].rc.switch_right ||
         switch_is_down(rc_data[TEMP].rc.switch_right)) // 当收不到遥控器信号时，使用图传链路
@@ -98,6 +107,7 @@ void RobotCMDTask(void)
 #ifdef ARM_BOARD
     // 发送给机械臂
     PubPushMessage(arm_cmd_pub, &arm_cmd_send);
+    UARTCommSend(cmd_uart_comm, (void *)&chassis_cmd_send);
 #endif
 #ifdef CHASSIS_BOARD
     // 发送给底盘
@@ -132,6 +142,8 @@ static void ArmKeep(void)
     arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
     arm_cmd_send.lift        = arm_fetch_data.height;
     arm_cmd_send.roll        = arm_fetch_data.roll;
+    arm_cmd_send.up_flag     = 0;
+    arm_cmd_send.roll_flag   = 0;
 }
 
 /**
@@ -347,6 +359,8 @@ static void VisionContorl(void)
         arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
         arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
         arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
+        // arm_cmd_send.up_flag     = 1;
+        // arm_cmd_send.lift        = vision_ctrl->z_height;
     } else {
         ArmKeep();
     }
@@ -412,6 +426,7 @@ static void VideoControlSet(void)
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 5) {
         case 0:
             VideoKey(); // 键盘控制
+            // VisionContorl();
             break;
         case 1:
             VideoCustom(); // 自定义控制器

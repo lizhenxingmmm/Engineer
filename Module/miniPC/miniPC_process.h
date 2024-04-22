@@ -85,7 +85,7 @@ typedef struct
 typedef struct
 {
     uint8_t header;
-    uint8_t is_tracking; // 是否追踪
+    float is_tracking; // 是否追踪
     float maximal_arm;   // 大臂的目标值
     float minimal_arm;   // 小臂的目标值
     float z_height;      // 机械臂高度
