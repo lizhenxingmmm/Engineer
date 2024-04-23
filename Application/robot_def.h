@@ -17,8 +17,8 @@
 
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // ! 单板控制整车，beta选项，建议别选上
-#define CHASSIS_BOARD // 底盘板
-// #define ARM_BOARD // 工程手臂板
+// #define CHASSIS_BOARD // 底盘板
+#define ARM_BOARD // 工程手臂板
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 底盘参数
@@ -152,6 +152,20 @@ typedef enum {
     ARM_AUTO_CONTORL,     // 自动控制
 } arm_mode_e;
 
+// 机械臂控制状态设置,注意与机械臂模式区分,这里可以看作机械臂模式的子模式
+typedef enum {
+    ARM_NORMAL = 0,  // 正常状态,能够被其他模式正常控制
+    ARM_RECYCLE,     // 回收状态,机械臂回收到初始位置
+    ARM_GETCARROCK,  // 抓取状态,机械臂抓取石块
+    ARM_GETCARROCK2, // 抓取状态2,机械臂抓取石块后取出
+    ARM_GETROCK,     // 抓取状态,机械臂抓取石块,一键取矿
+} arm_status_e;
+
+typedef enum {
+    SUCKER_OFF = 0, // 涵道风机关
+    SUCKER_ON,      // 涵道风机开
+} sucker_mode_e;
+
 typedef enum {
     DOWNLOAD_OFF = 0, // 关闭调试模式
     DOWNLOAD_ON,      // 开启调试模式,用于控制大疆电机的调试，防止下载时电机转动
@@ -173,8 +187,10 @@ typedef struct
     chassis_mode_e chassis_mode;
     float chassis_speed_buff;
     // UI部分
-    ui_mode_e ui_mode;   //  UI状态
-    arm_mode_e arm_mode; // 机械臂状态
+    ui_mode_e ui_mode;         //  UI状态
+    arm_mode_e arm_mode;       // 机械臂状态
+    sucker_mode_e sucker_mode; // 涵道风机状态
+    arm_status_e arm_status;   // 机械臂控制状态(状态子模式)
     //  ...
 
 } Chassis_Ctrl_Cmd_s;
@@ -182,18 +198,19 @@ typedef struct
 // cmd发布的机械臂控制数据,由arm订阅
 typedef struct
 {
-    float maximal_arm;
-    float minimal_arm;
-    float finesse;
-    float pitch_arm;
-    float lift;
-    float roll;
-    int8_t up_flag;
-    int8_t roll_flag;
-    int8_t sucker_flag;
-    arm_mode_e arm_mode;
-    arm_mode_e arm_mode_last;
-    download_mode_e download_mode;
+    float maximal_arm;             // 机械臂大臂目标角度
+    float minimal_arm;             // 机械臂小臂目标角度
+    float finesse;                 // 机械臂手腕目标角度
+    float pitch_arm;               // 机械臂pitch目标角度
+    float lift;                    // 机械臂高度
+    float roll;                    // 机械臂roll目标角度
+    int8_t up_flag;                // 机械臂上升标志
+    int8_t roll_flag;              // 机械臂roll标志
+    sucker_mode_e sucker_mode;     // 涵道风机状态
+    arm_mode_e arm_mode;           // 机械臂状态
+    arm_mode_e arm_mode_last;      // 机械臂上一次状态
+    arm_status_e arm_status;       // 机械臂控制状态(状态子模式)
+    download_mode_e download_mode; // 下载模式
 } Arm_Ctrl_Cmd_s;
 
 // cmd发布的云台控制数据,由gimbal订阅

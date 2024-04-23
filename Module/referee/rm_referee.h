@@ -61,6 +61,9 @@ typedef struct
     uint32_t Power_flag : 1;
     uint32_t level_flag : 1;
     uint32_t tracking_flag : 1;
+    uint32_t arm_flag : 1;
+    uint32_t sucker_flag : 1;
+    uint32_t arm_status_flag : 1;
 } Referee_Interactive_Flag_t;
 
 // 此结构体包含UI绘制与机器人车间通信的需要的其他非裁判系统数据
@@ -75,6 +78,9 @@ typedef struct
     lid_mode_e lid_mode;                     // 弹舱盖打开
     loader_mode_e loader_mode;               // 射频选择
     Chassis_Power_Data_s Chassis_Power_Data; // 功率控制
+    arm_mode_e arm_mode;                     // 机械臂模式
+    sucker_mode_e sucker_mode;               // 涵道风机状态
+    arm_status_e arm_status;                 // 机械臂控制状态(状态子模式)
     uint8_t level;                           // 等级显示
     uint8_t is_tracking;                     // 视觉是否识别
 
@@ -86,6 +92,9 @@ typedef struct
     lid_mode_e lid_last_mode;
     loader_mode_e loader_mode_last;
     Chassis_Power_Data_s Chassis_last_Power_Data;
+    arm_mode_e arm_mode_last;
+    sucker_mode_e sucker_mode_last;
+    arm_status_e arm_status_last;
     uint8_t level_last;
     uint8_t is_tracking_last;
     ui_mode_e ui_mode;

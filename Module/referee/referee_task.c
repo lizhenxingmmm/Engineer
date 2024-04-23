@@ -88,16 +88,16 @@ void MyUIInit()
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[0]);
     UICharDraw(&UI_State_sta[1], "ss1", UI_Graph_ADD, 8, UI_Color_Main, 15, 2, 150, 750, "chassis:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[1]);
-    UICharDraw(&UI_State_sta[2], "ss2", UI_Graph_ADD, 8, UI_Color_Yellow, 15, 2, 150, 700, "gimbal:");
+    UICharDraw(&UI_State_sta[2], "ss2", UI_Graph_ADD, 8, UI_Color_Yellow, 15, 2, 150, 700, "arm:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[2]);
-    UICharDraw(&UI_State_sta[3], "ss3", UI_Graph_ADD, 8, UI_Color_Orange, 15, 2, 150, 650, "shoot:");
+    UICharDraw(&UI_State_sta[3], "ss3", UI_Graph_ADD, 8, UI_Color_Orange, 15, 2, 150, 650, "sucker:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[3]);
-    UICharDraw(&UI_State_sta[4], "ss4", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 150, 600, "frict:");
+    UICharDraw(&UI_State_sta[4], "ss4", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 150, 600, "state:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[4]);
     UICharDraw(&UI_State_sta[5], "ss5", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 150, 550, "lid:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[5]);
-    UICharDraw(&UI_State_sta[6], "ss6", UI_Graph_ADD, 8, UI_Color_Purplish_red, 15, 2, 150, 850, "Bounce:");
-    UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[6]);
+    // UICharDraw(&UI_State_sta[6], "ss6", UI_Graph_ADD, 8, UI_Color_Purplish_red, 15, 2, 150, 850, "Bounce:");
+    // UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[6]);
     // 绘制车辆状态标志，动态
     // 由于初始化时xxx_last_mode默认为0，所以此处对应UI也应该设为0时对应的UI，防止模式不变的情况下无法置位flag，导致UI无法刷新
     // 等级显示，动态
@@ -105,16 +105,16 @@ void MyUIInit()
     UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[0]);
     UICharDraw(&UI_State_dyn[1], "sd1", UI_Graph_ADD, 8, UI_Color_Main, 15, 2, 270, 750, "fast     ");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[1]);
-    UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_ADD, 8, UI_Color_Yellow, 15, 2, 270, 700, "zeroforce");
+    UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_ADD, 8, UI_Color_Yellow, 15, 2, 270, 700, "key      ");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[2]);
     UICharDraw(&UI_State_dyn[3], "sd3", UI_Graph_ADD, 8, UI_Color_Orange, 15, 2, 270, 650, "off");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[3]);
-    UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 270, 600, "off");
+    UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 270, 600, "normal  ");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[4]);
     UICharDraw(&UI_State_dyn[5], "sd5", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 270, 550, "open ");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[5]);
-    UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_ADD, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "medium ");
-    UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[6]);
+    // UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_ADD, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "medium ");
+    // UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[6]);
 
     // 底盘功率显示，静态
     UICharDraw(&UI_State_sta[5], "ss5", UI_Graph_ADD, 7, UI_Color_Green, 18, 2, 620, 230, "Power:");
@@ -237,36 +237,70 @@ static void MyUIRefresh(referee_info_t *referee_recv_info, Referee_Interactive_i
         UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[1]);
         _Interactive_data->Referee_Interactive_Flag.chassis_flag = 0;
     }
-    // gimbal
-    if (_Interactive_data->Referee_Interactive_Flag.gimbal_flag == 1) {
-        switch (_Interactive_data->gimbal_mode) {
-            case GIMBAL_ZERO_FORCE: {
+    // arm_mode
+    if (_Interactive_data->Referee_Interactive_Flag.arm_flag == 1) {
+        switch (_Interactive_data->arm_mode) {
+            case ARM_ZERO_FORCE: {
                 UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "zeroforce");
                 break;
             }
-            case GIMBAL_FREE_MODE: {
-                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "free     ");
+            case ARM_HUM_CONTORL: {
+                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "cus_norm ");
                 break;
             }
-            case GIMBAL_GYRO_MODE: {
-                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "gyro     ");
+            case ARM_VISION_CONTROL: {
+                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "vision   ");
+                break;
+            }
+            case ARM_SLIGHTLY_CONTROL: {
+                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "slight   ");
+                break;
+            }
+            case ARM_KEY_CONTROL: {
+                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "key      ");
+                break;
+            }
+            case ARM_AUTO_CONTORL: {
+                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "auto     ");
                 break;
             }
         }
         UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[2]);
-        _Interactive_data->Referee_Interactive_Flag.gimbal_flag = 0;
+        _Interactive_data->Referee_Interactive_Flag.arm_flag = 0;
     }
-    // shoot
-    if (_Interactive_data->Referee_Interactive_Flag.shoot_flag == 1) {
-        UICharDraw(&UI_State_dyn[3], "sd3", UI_Graph_Change, 8, UI_Color_Orange, 15, 2, 270, 650, _Interactive_data->shoot_mode == SHOOT_ON ? "on " : "off");
+    // sucker_flag
+    if (_Interactive_data->Referee_Interactive_Flag.sucker_flag == 1) {
+        UICharDraw(&UI_State_dyn[3], "sd3", UI_Graph_Change, 8, UI_Color_Orange, 15, 2, 270, 650, _Interactive_data->sucker_mode == SUCKER_ON ? "on " : "off");
         UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[3]);
-        _Interactive_data->Referee_Interactive_Flag.shoot_flag = 0;
+        _Interactive_data->Referee_Interactive_Flag.sucker_flag = 0;
     }
-    // friction
-    if (_Interactive_data->Referee_Interactive_Flag.friction_flag == 1) {
-        UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_Change, 8, UI_Color_Pink, 15, 2, 270, 600, _Interactive_data->friction_mode == FRICTION_ON ? "on " : "off");
-        UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[4]);
-        _Interactive_data->Referee_Interactive_Flag.friction_flag = 0;
+    // arm_states
+    if (_Interactive_data->Referee_Interactive_Flag.arm_status_flag == 1) {
+        switch (_Interactive_data->arm_status) {
+            case ARM_NORMAL:
+                UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_Change, 8, UI_Color_Pink, 15, 2, 270, 600, "normal  ");
+                UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[4]);
+                break;
+            case ARM_RECYCLE:
+                UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_Change, 8, UI_Color_Pink, 15, 2, 270, 600, "recycle ");
+                UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[4]);
+                break;
+            case ARM_GETCARROCK:
+                UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_Change, 8, UI_Color_Pink, 15, 2, 270, 600, "carrock ");
+                UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[4]);
+                break;
+            case ARM_GETCARROCK2:
+                UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_Change, 8, UI_Color_Pink, 15, 2, 270, 600, "carrock2");
+                UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[4]);
+                break;
+            case ARM_GETROCK:
+                UICharDraw(&UI_State_dyn[4], "sd4", UI_Graph_Change, 8, UI_Color_Pink, 15, 2, 270, 600, "getrock ");
+                UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[4]);
+                break;
+            default:
+                break;
+        }
+        _Interactive_data->Referee_Interactive_Flag.arm_status_flag = 0;
     }
     // lid
     if (_Interactive_data->Referee_Interactive_Flag.lid_flag == 1) {
@@ -275,26 +309,26 @@ static void MyUIRefresh(referee_info_t *referee_recv_info, Referee_Interactive_i
         _Interactive_data->Referee_Interactive_Flag.lid_flag = 0;
     }
     // loader
-    if (_Interactive_data->Referee_Interactive_Flag.loader_flag == 1) {
-        switch (_Interactive_data->loader_mode) {
-            case LOAD_REVERSE:
-                UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "reverse");
-                break;
-            case LOAD_SLOW:
-                UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "slow   ");
-                break;
-            case LOAD_MEDIUM:
-                UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "medium ");
-                break;
-            case LOAD_FAST:
-                UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "fast   ");
-                break;
-            default:
-                break;
-        }
-        UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[6]);
-        _Interactive_data->Referee_Interactive_Flag.loader_flag = 0;
-    }
+    // if (_Interactive_data->Referee_Interactive_Flag.loader_flag == 1) {
+    //     switch (_Interactive_data->loader_mode) {
+    //         case LOAD_REVERSE:
+    //             UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "reverse");
+    //             break;
+    //         case LOAD_SLOW:
+    //             UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "slow   ");
+    //             break;
+    //         case LOAD_MEDIUM:
+    //             UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "medium ");
+    //             break;
+    //         case LOAD_FAST:
+    //             UICharDraw(&UI_State_dyn[6], "sd6", UI_Graph_Change, 8, UI_Color_Purplish_red, 15, 2, 270, 850, "fast   ");
+    //             break;
+    //         default:
+    //             break;
+    //     }
+    //     UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[6]);
+    //     _Interactive_data->Referee_Interactive_Flag.loader_flag = 0;
+    // }
     // power
     if (_Interactive_data->Referee_Interactive_Flag.Power_flag == 1) {
         UIFloatDraw(&UI_Energy[1], "sd7", UI_Graph_Change, 8, UI_Color_Green, 18, 2, 2, 750, 230, _Interactive_data->Chassis_Power_Data.chassis_power_mx * 1000);
@@ -303,12 +337,12 @@ static void MyUIRefresh(referee_info_t *referee_recv_info, Referee_Interactive_i
         _Interactive_data->Referee_Interactive_Flag.Power_flag = 0;
     }
     // is_tracking
-    if (_Interactive_data->Referee_Interactive_Flag.tracking_flag == 1) {
-        UILineDraw(&UI_shoot_line[0], "sl0", UI_Graph_Change, 8, _Interactive_data->is_tracking ? UI_Color_Pink : UI_Color_White, 3, 710, shoot_line_location[0], 1210, shoot_line_location[0]);
-        UILineDraw(&UI_shoot_line[1], "sl1", UI_Graph_Change, 8, _Interactive_data->is_tracking == 1 ? UI_Color_Pink : UI_Color_White, 3, shoot_line_location[1], 340, shoot_line_location[1], 740);
-        UIGraphRefresh(&referee_recv_info->referee_id, 2, UI_shoot_line[0], UI_shoot_line[1]);
-        _Interactive_data->Referee_Interactive_Flag.tracking_flag = 0;
-    }
+    // if (_Interactive_data->Referee_Interactive_Flag.tracking_flag == 1) {
+    //     UILineDraw(&UI_shoot_line[0], "sl0", UI_Graph_Change, 8, _Interactive_data->is_tracking ? UI_Color_Pink : UI_Color_White, 3, 710, shoot_line_location[0], 1210, shoot_line_location[0]);
+    //     UILineDraw(&UI_shoot_line[1], "sl1", UI_Graph_Change, 8, _Interactive_data->is_tracking == 1 ? UI_Color_Pink : UI_Color_White, 3, shoot_line_location[1], 340, shoot_line_location[1], 740);
+    //     UIGraphRefresh(&referee_recv_info->referee_id, 2, UI_shoot_line[0], UI_shoot_line[1]);
+    //     _Interactive_data->Referee_Interactive_Flag.tracking_flag = 0;
+    // }
 }
 
 /**
@@ -324,30 +358,30 @@ static void UIChangeCheck(Referee_Interactive_info_t *_Interactive_data)
         _Interactive_data->chassis_last_mode                     = _Interactive_data->chassis_mode;
     }
 
-    if (_Interactive_data->gimbal_mode != _Interactive_data->gimbal_last_mode) {
-        _Interactive_data->Referee_Interactive_Flag.gimbal_flag = 1;
-        _Interactive_data->gimbal_last_mode                     = _Interactive_data->gimbal_mode;
-    }
+    // if (_Interactive_data->gimbal_mode != _Interactive_data->gimbal_last_mode) {
+    //     _Interactive_data->Referee_Interactive_Flag.gimbal_flag = 1;
+    //     _Interactive_data->gimbal_last_mode                     = _Interactive_data->gimbal_mode;
+    // }
 
-    if (_Interactive_data->shoot_mode != _Interactive_data->shoot_last_mode) {
-        _Interactive_data->Referee_Interactive_Flag.shoot_flag = 1;
-        _Interactive_data->shoot_last_mode                     = _Interactive_data->shoot_mode;
-    }
+    // if (_Interactive_data->shoot_mode != _Interactive_data->shoot_last_mode) {
+    //     _Interactive_data->Referee_Interactive_Flag.shoot_flag = 1;
+    //     _Interactive_data->shoot_last_mode                     = _Interactive_data->shoot_mode;
+    // }
 
-    if (_Interactive_data->friction_mode != _Interactive_data->friction_last_mode) {
-        _Interactive_data->Referee_Interactive_Flag.friction_flag = 1;
-        _Interactive_data->friction_last_mode                     = _Interactive_data->friction_mode;
-    }
+    // if (_Interactive_data->friction_mode != _Interactive_data->friction_last_mode) {
+    //     _Interactive_data->Referee_Interactive_Flag.friction_flag = 1;
+    //     _Interactive_data->friction_last_mode                     = _Interactive_data->friction_mode;
+    // }
 
-    if (_Interactive_data->lid_mode != _Interactive_data->lid_last_mode) {
-        _Interactive_data->Referee_Interactive_Flag.lid_flag = 1;
-        _Interactive_data->lid_last_mode                     = _Interactive_data->lid_mode;
-    }
+    // if (_Interactive_data->lid_mode != _Interactive_data->lid_last_mode) {
+    //     _Interactive_data->Referee_Interactive_Flag.lid_flag = 1;
+    //     _Interactive_data->lid_last_mode                     = _Interactive_data->lid_mode;
+    // }
 
-    if (_Interactive_data->loader_mode != _Interactive_data->loader_mode_last) {
-        _Interactive_data->Referee_Interactive_Flag.loader_flag = 1;
-        _Interactive_data->loader_mode_last                     = _Interactive_data->loader_mode;
-    }
+    // if (_Interactive_data->loader_mode != _Interactive_data->loader_mode_last) {
+    //     _Interactive_data->Referee_Interactive_Flag.loader_flag = 1;
+    //     _Interactive_data->loader_mode_last                     = _Interactive_data->loader_mode;
+    // }
 
     if (_Interactive_data->Chassis_Power_Data.chassis_power_mx != _Interactive_data->Chassis_last_Power_Data.chassis_power_mx) {
         _Interactive_data->Referee_Interactive_Flag.Power_flag      = 1;
@@ -360,10 +394,18 @@ static void UIChangeCheck(Referee_Interactive_info_t *_Interactive_data)
         _Interactive_data->level_last                          = _Interactive_data->level;
     }
 
-    // _Interactive_data->is_tracking = is_track;
-    // if (_Interactive_data->is_tracking != _Interactive_data->is_tracking_last)
-    // {
-    //     _Interactive_data->Referee_Interactive_Flag.tracking_flag = 1;
-    //     _Interactive_data->is_tracking_last = _Interactive_data->is_tracking;
-    // }
+    if (_Interactive_data->arm_mode != _Interactive_data->arm_mode_last) {
+        _Interactive_data->Referee_Interactive_Flag.arm_flag = 1;
+        _Interactive_data->arm_mode_last                     = _Interactive_data->arm_mode;
+    }
+
+    if (_Interactive_data->sucker_mode != _Interactive_data->sucker_mode_last) {
+        _Interactive_data->Referee_Interactive_Flag.sucker_flag = 1;
+        _Interactive_data->sucker_mode_last                     = _Interactive_data->sucker_mode;
+    }
+
+    if (_Interactive_data->arm_status != _Interactive_data->arm_status_last) {
+        _Interactive_data->Referee_Interactive_Flag.arm_status_flag = 1;
+        _Interactive_data->arm_status_last                          = _Interactive_data->arm_status;
+    }
 }

@@ -262,7 +262,7 @@ void ARMTask(void)
         // DJIMotorSetRef(roll, 0);
     }
 
-    if (arm_cmd_recv.sucker_flag) {
+    if (arm_cmd_recv.sucker_mode == SUCKER_ON) {
         __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 2000);
     } else {
         __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 1000);

@@ -36,12 +36,12 @@ static Subscriber_t *arm_feed_sub;       // 底盘反馈信息订阅者
 static Vision_Recv_s *vision_ctrl;       // 视觉控制信息
 static UARTComm_Instance *cmd_uart_comm; // 双板通信
 #endif
-static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信息,包括控制信息和UI绘制相关
-static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
-static Arm_Ctrl_Cmd_s arm_cmd_send;              // 发送给机械臂的信息
-static Arm_Upload_Data_s arm_fetch_data;         // 从机械臂接受的反馈信息
-static void RemoteControlSet(void);              // 遥控器控制量设置
-static void VideoControlSet(void);               // 图传链路控制量设置
+static Chassis_Ctrl_Cmd_s chassis_cmd_send;       // 发送给底盘应用的信息,包括控制信息和UI绘制相关
+static Chassis_Upload_Data_s chassis_fetch_data;  // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
+static Arm_Ctrl_Cmd_s arm_cmd_send;               // 发送给机械臂的信息
+__unused static Arm_Upload_Data_s arm_fetch_data; // 从机械臂接受的反馈信息
+static void RemoteControlSet(void);               // 遥控器控制量设置
+static void VideoControlSet(void);                // 图传链路控制量设置
 static void EmergencyHandler(void);
 static RC_ctrl_t *rc_data;       // 遥控器数据指针,初始化时返回
 static Video_ctrl_t *video_data; // 视觉数据指针,初始化时返回
@@ -62,9 +62,9 @@ void RobotCMDInit(void)
         .daemon_counter = 10,
     };
     cmd_uart_comm = UARTCommInit(&ucomm_config);
-    video_data = VideoTransmitterControlInit(&huart6); // 初始化图传链路
-    rc_data     = RemoteControlInit(&huart3);           // 初始化遥控器,C板上使用USART1
-    vision_ctrl = VisionInit(&huart3); // 初始化视觉控制
+    video_data    = VideoTransmitterControlInit(&huart6); // 初始化图传链路
+    rc_data       = RemoteControlInit(&huart3);           // 初始化遥控器,C板上使用USART1
+    vision_ctrl   = VisionInit(&huart3);                  // 初始化视觉控制
 
     arm_cmd_pub  = PubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_feed_sub = SubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
@@ -72,8 +72,7 @@ void RobotCMDInit(void)
 
 #ifdef CHASSIS_BOARD
     // 初始化遥控器,使用串口3
-    rc_data          = RemoteControlInit(&huart3);           // 初始化遥控器,C板上使用USART3
-    video_data       = VideoTransmitterControlInit(&huart1); // 初始化图传链路
+    rc_data          = RemoteControlInit(&huart3); // 初始化遥控器,C板上使用USART3
     chassis_cmd_pub  = PubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
 #endif // CHASSIS_BOARD
@@ -103,7 +102,9 @@ void RobotCMDTask(void)
         EmergencyHandler();
 
     // 发送控制信息
-    chassis_cmd_send.arm_mode = arm_cmd_send.arm_mode;
+    chassis_cmd_send.arm_mode    = arm_cmd_send.arm_mode;
+    chassis_cmd_send.sucker_mode = arm_cmd_send.sucker_mode;
+    chassis_cmd_send.arm_status  = arm_cmd_send.arm_status;
 #ifdef ARM_BOARD
     // 发送给机械臂
     PubPushMessage(arm_cmd_pub, &arm_cmd_send);
@@ -144,6 +145,7 @@ static void ArmKeep(void)
     arm_cmd_send.roll        = arm_fetch_data.roll;
     arm_cmd_send.up_flag     = 0;
     arm_cmd_send.roll_flag   = 0;
+    arm_cmd_send.arm_status  = ARM_NORMAL;
 }
 
 /**
@@ -159,7 +161,7 @@ static void Recycle(void)
     arm_cmd_send.pitch_arm   = 0.5509f;
     arm_cmd_send.lift        = -5;
     arm_cmd_send.up_flag     = 1;
-
+    arm_cmd_send.arm_status  = ARM_RECYCLE;
     // arm_cmd_send.roll = arm_fetch_data.roll;
     // arm_cmd_send.lift = arm_fetch_data.height;
 }
@@ -174,12 +176,27 @@ static void GetRockFromCar(void)
     arm_cmd_send.minimal_arm = 2.40f;
     arm_cmd_send.finesse     = -0.0001f;
     arm_cmd_send.pitch_arm   = -1.04f;
-    // arm_cmd_send.lift        = -5;
-    // arm_cmd_send.up_flag     = 1;
-    arm_cmd_send.lift      = -video_data[TEMP].cus.height + arm_fetch_data.height;
-    arm_cmd_send.roll      = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
-    arm_cmd_send.up_flag   = 1;
-    arm_cmd_send.roll_flag = 1;
+    arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
+    arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
+    arm_cmd_send.up_flag     = 1;
+    arm_cmd_send.roll_flag   = 1;
+    arm_cmd_send.arm_status  = ARM_GETCARROCK;
+}
+/**
+ * @brief 从车上取矿2,取矿后取出,避免矿石碰到 车
+ *
+ */
+static void GetRockFromCar2(void)
+{
+    arm_cmd_send.maximal_arm = -1.08f;
+    arm_cmd_send.minimal_arm = 2.28f;
+    arm_cmd_send.finesse     = 1.29f;
+    arm_cmd_send.pitch_arm   = -1.04f;
+    arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
+    arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
+    arm_cmd_send.up_flag     = 1;
+    arm_cmd_send.roll_flag   = 1;
+    arm_cmd_send.arm_status  = ARM_GETCARROCK2;
 }
 
 static void DebugModeControl(void)
@@ -202,10 +219,10 @@ static void SuckerContorl(void)
 {
     switch (video_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
         case 1:
-            arm_cmd_send.sucker_flag = 1;
+            arm_cmd_send.sucker_mode = SUCKER_ON;
             break;
         default:
-            arm_cmd_send.sucker_flag = 0;
+            arm_cmd_send.sucker_mode = SUCKER_OFF;
             break;
     }
 }
@@ -260,9 +277,10 @@ static void VideoKey(void)
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
         case 0:
             arm_cmd_send.maximal_arm += (video_data[TEMP].key[KEY_PRESS].q - video_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
-            arm_cmd_send.minimal_arm += (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 0.003f;
+            arm_cmd_send.minimal_arm += (video_data[TEMP].key[KEY_PRESS].a - video_data[TEMP].key[KEY_PRESS].d) * 0.003f;
             arm_cmd_send.finesse += (video_data[TEMP].key[KEY_PRESS].z - video_data[TEMP].key[KEY_PRESS].c) * 0.003f;
             arm_cmd_send.pitch_arm += (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 0.003f;
+            arm_cmd_send.arm_status = ARM_NORMAL;
             break;
         default:
             GetRockFromCar();
@@ -312,25 +330,13 @@ static void VideoCustom(void)
             arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 5;
             arm_cmd_send.up_flag     = 1;
             arm_cmd_send.roll_flag   = 1;
+            arm_cmd_send.arm_status  = ARM_NORMAL;
             break;
         case 1:
             GetRockFromCar();
             break;
         default:
-            // -1.08
-            // 2.28
-            // 1.29
-            // -1.05
-            arm_cmd_send.maximal_arm = -1.08f;
-            arm_cmd_send.minimal_arm = 2.28f;
-            arm_cmd_send.finesse     = 1.29f;
-            arm_cmd_send.pitch_arm   = -1.04f;
-            // arm_cmd_send.lift        = -5;
-            // arm_cmd_send.up_flag     = 1;
-            arm_cmd_send.lift      = -video_data[TEMP].cus.height + arm_fetch_data.height;
-            arm_cmd_send.roll      = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
-            arm_cmd_send.up_flag   = 1;
-            arm_cmd_send.roll_flag = 1;
+            GetRockFromCar2();
             break;
     }
 
@@ -394,6 +400,7 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.arm_mode = ARM_SLIGHTLY_CONTROL;
     if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
         StateInit(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, 0);
+        arm_cmd_send.arm_status = ARM_NORMAL;
     }
 
     float angle_ref[6];
@@ -460,7 +467,7 @@ static void VideoControlSet(void)
     }
 
 #endif
-#ifdef CHASSIS_BOARD
+
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 3) {
         case 0:
             chassis_cmd_send.chassis_mode       = CHASSIS_FAST;
@@ -485,7 +492,6 @@ static void VideoControlSet(void)
     chassis_cmd_send.wz = (float)video_data[TEMP].key_data.mouse_x * 10 +
                           (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 26000 * chassis_cmd_send.chassis_speed_buff;
     chassis_cmd_send.chassis_speed_buff = 1; // test
-#endif
 }
 
 /**
