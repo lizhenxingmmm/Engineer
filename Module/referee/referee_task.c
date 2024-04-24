@@ -264,6 +264,10 @@ static void MyUIRefresh(referee_info_t *referee_recv_info, Referee_Interactive_i
                 UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "auto     ");
                 break;
             }
+            case ARM_LIFT_INIT: {
+                UICharDraw(&UI_State_dyn[2], "sd2", UI_Graph_Change, 8, UI_Color_Yellow, 15, 2, 270, 700, "init     ");
+                break;
+            }
         }
         UICharRefresh(&referee_recv_info->referee_id, UI_State_dyn[2]);
         _Interactive_data->Referee_Interactive_Flag.arm_flag = 0;

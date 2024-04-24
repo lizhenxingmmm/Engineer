@@ -44,8 +44,8 @@
 #define FINE_MAX    1.9f
 #define PITCH_MIN   -1.05f
 #define PITCH_MAX   0.8f
-#define HEIGHT_MIN  -300.f
-#define HEIGHT_MAX  300.f // 50
+#define HEIGHT_MIN  -8.f
+#define HEIGHT_MAX  260.f // 50
 #define ROLL_MIN    -180.f
 #define ROLL_MAX    180.f
 
@@ -150,6 +150,7 @@ typedef enum {
     ARM_SLIGHTLY_CONTROL, // 轻微控制
     ARM_KEY_CONTROL,      // 键盘控制
     ARM_AUTO_CONTORL,     // 自动控制
+    ARM_LIFT_INIT,        // 高度初始化
 } arm_mode_e;
 
 // 机械臂控制状态设置,注意与机械臂模式区分,这里可以看作机械臂模式的子模式
@@ -165,6 +166,21 @@ typedef enum {
     SUCKER_OFF = 0, // 涵道风机关
     SUCKER_ON,      // 涵道风机开
 } sucker_mode_e;
+
+typedef enum {
+    LIFT_OFF = 0,    // 机械臂升降关闭
+    LIFT_ANGLE_MODE, // 机械臂升降角度模式
+    LIFT_SPEED_MODE, // 机械臂升降速度模式
+    LIFT_KEEP,       // 机械臂升降保持模式
+    LIFT_INIT_MODE,  // 机械臂升降初始化模式
+} lift_mode_e;
+
+typedef enum {
+    ROLL_OFF = 0,    // 机械臂roll关闭
+    ROLL_ANGLE_MODE, // 机械臂roll开
+    ROLL_SPEED_MODE, // 机械臂roll开
+    ROLL_KEEP,       // 机械臂roll保持
+} roll_mode_e;
 
 typedef enum {
     DOWNLOAD_OFF = 0, // 关闭调试模式
@@ -204,13 +220,14 @@ typedef struct
     float pitch_arm;               // 机械臂pitch目标角度
     float lift;                    // 机械臂高度
     float roll;                    // 机械臂roll目标角度
-    int8_t up_flag;                // 机械臂上升标志
-    int8_t roll_flag;              // 机械臂roll标志
+    lift_mode_e lift_mode;         // 机械臂上升标志
+    roll_mode_e roll_mode;         // 机械臂roll标志
     sucker_mode_e sucker_mode;     // 涵道风机状态
     arm_mode_e arm_mode;           // 机械臂状态
     arm_mode_e arm_mode_last;      // 机械臂上一次状态
     arm_status_e arm_status;       // 机械臂控制状态(状态子模式)
     download_mode_e download_mode; // 下载模式
+    int8_t lift_init;              // 机械臂初始化
 } Arm_Ctrl_Cmd_s;
 
 // cmd发布的云台控制数据,由gimbal订阅

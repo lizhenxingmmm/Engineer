@@ -20,8 +20,8 @@ static Arm_Upload_Data_s arm_feedback_data; // 从底盘接收的数据
 
 static DM_MotorInstance *maximal_arm, *minimal_arm, *finesse, *pitch_arm;
 static DJIMotor_Instance *lift, *roll;
-static int8_t is_init;
-static float roll_init_angle, roll_real, lift_init_angle, height, lift_speed_feedfoward = 5.0f, lift_current_feedfoward = 1.f;
+static int8_t is_init, lift_init_flag = 0;
+static float roll_init_angle, roll_real, lift_motor_init_angle, lift_init_height, height, lift_speed_feedfoward = 5.0f, lift_current_feedfoward = 1.f;
 
 static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会回到原位，当然可以重新置零，但是工程的机械臂要限位？
 {
@@ -29,7 +29,7 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
     DMMotorSetSpeedRef(maximal_arm, 0.3);
 
     DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
-    DMMotorSetSpeedRef(minimal_arm, 1.5);
+    DMMotorSetSpeedRef(minimal_arm, 4);
 
     DMMotorSetRef(finesse, finesse->measure.position);
     DMMotorSetSpeedRef(finesse, 1.5);
@@ -43,7 +43,7 @@ static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会�
 
 static void Height_Calculation(void)
 {
-    height = -(lift->measure.total_angle - lift_init_angle) / LIFT_OFFSET;
+    height = -(lift->measure.total_angle - lift_motor_init_angle) / LIFT_OFFSET - lift_init_height;
 }
 
 static void Roll_Calculation(void)
@@ -193,6 +193,21 @@ void ArmInit(void)
     Sucker_Init();
 }
 
+static void LiftHeightInit(int8_t _init_flag)
+{
+    if (_init_flag == 1 && lift_init_flag != 2) { // 高度只会初始化一次
+        lift_init_flag = 1;
+    }
+    if (abs(lift->measure.real_current) <= 7000 && lift_init_flag == 1) {
+        DJIMotorEnable(lift);
+        DJIMotorOuterLoop(lift, SPEED_LOOP);
+        DJIMotorSetRef(lift, -6000);
+    } else if ((abs(lift->measure.real_current) > 7000) && lift_init_flag == 1) {
+        lift_init_height = height;
+        lift_init_flag   = 2;
+    }
+}
+
 // lift的机械距离大约350mm 最高机械角度-64948 最低机械角度 22115
 // 机械行程 87063度
 // 读角度时init角度应位于最高点 init角度对应350mm 最低点为init角度-87063 对应0mm
@@ -205,9 +220,9 @@ void ARMTask(void)
 {
     if (!is_init) {
         ArmDMInit();
-        roll_init_angle = roll->measure.total_angle; // min = -3460 - 165 max =4973 - 165
-        lift_init_angle = lift->measure.total_angle;
-        is_init         = 1;
+        roll_init_angle       = roll->measure.total_angle; // min = -3460 - 165 max =4973 - 165
+        lift_motor_init_angle = lift->measure.total_angle;
+        is_init               = 1;
     }
     SubGetMessage(arm_sub, &arm_cmd_recv);
     // 机械臂控制任务
@@ -237,29 +252,48 @@ void ARMTask(void)
     DMMotorSetRef(finesse, arm_cmd_recv.finesse);         // MIN -1.6,MAX 1.9
     DMMotorSetRef(pitch_arm, arm_cmd_recv.pitch_arm);     // MIN -0.8,MAX 1.0
 
-    if (arm_cmd_recv.up_flag != 0) {
-        DJIMotorOuterLoop(lift, ANGLE_LOOP);
-        DJIMotorSetRef(lift, arm_cmd_recv.lift);
-    } else {
-        DJIMotorOuterLoop(lift, ANGLE_LOOP);
-        DJIMotorSetRef(lift, height);
+    switch (arm_cmd_recv.lift_mode) {
+        case LIFT_OFF:
+            DJIMotorStop(lift);
+            break;
+        case LIFT_KEEP:
+            DJIMotorEnable(lift);
+            DJIMotorOuterLoop(lift, ANGLE_LOOP);
+            DJIMotorSetRef(lift, height);
+            break;
+        case LIFT_ANGLE_MODE:
+            DJIMotorEnable(lift);
+            DJIMotorOuterLoop(lift, ANGLE_LOOP);
+            DJIMotorSetRef(lift, arm_cmd_recv.lift);
+            break;
+        case LIFT_SPEED_MODE:
+            DJIMotorEnable(lift);
+            DJIMotorOuterLoop(lift, SPEED_LOOP);
+            DJIMotorSetRef(lift, arm_cmd_recv.lift);
+            break;
+        case LIFT_INIT_MODE:
+            LiftHeightInit(arm_cmd_recv.lift_init);
+            break;
+        default:
+            break;
     }
 
-    if (arm_cmd_recv.roll_flag != 0) {
-        DJIMotorOuterLoop(roll, ANGLE_LOOP);
-        DJIMotorSetRef(roll, arm_cmd_recv.roll);
-        // if (arm_cmd_recv.roll - roll_real > 2) {
-        //     DJIMotorSetRef(roll, 8000);
-        // } else if (arm_cmd_recv.roll - roll_real < -2) {
-        //     DJIMotorSetRef(roll, -8000);
-        // } else {
-        //     DJIMotorSetRef(roll, 0);
-        // }
-        // DJIMotorSetRef(roll, 2500 * arm_cmd_recv.roll_flag);
-    } else {
-        DJIMotorOuterLoop(roll, ANGLE_LOOP);
-        DJIMotorSetRef(roll, roll_real);
-        // DJIMotorSetRef(roll, 0);
+    switch (arm_cmd_recv.roll_mode) {
+        case ROLL_OFF:
+            DJIMotorStop(roll);
+            break;
+        case LIFT_KEEP:
+            DJIMotorEnable(roll);
+            DJIMotorOuterLoop(roll, ANGLE_LOOP);
+            DJIMotorSetRef(roll, roll_real);
+            break;
+        case LIFT_ANGLE_MODE:
+            DJIMotorEnable(roll);
+            DJIMotorOuterLoop(roll, ANGLE_LOOP);
+            DJIMotorSetRef(roll, arm_cmd_recv.roll);
+            break;
+        default:
+            break;
     }
 
     if (arm_cmd_recv.sucker_mode == SUCKER_ON) {

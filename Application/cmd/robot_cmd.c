@@ -143,8 +143,8 @@ static void ArmKeep(void)
     arm_cmd_send.pitch_arm   = arm_fetch_data.pitch_arm;
     arm_cmd_send.lift        = arm_fetch_data.height;
     arm_cmd_send.roll        = arm_fetch_data.roll;
-    arm_cmd_send.up_flag     = 0;
-    arm_cmd_send.roll_flag   = 0;
+    arm_cmd_send.lift_mode   = LIFT_KEEP;
+    arm_cmd_send.roll_mode   = ROLL_KEEP;
     arm_cmd_send.arm_status  = ARM_NORMAL;
 }
 
@@ -160,7 +160,7 @@ static void Recycle(void)
     arm_cmd_send.finesse     = 1.2339f;
     arm_cmd_send.pitch_arm   = 0.5509f;
     arm_cmd_send.lift        = -5;
-    arm_cmd_send.up_flag     = 1;
+    arm_cmd_send.lift_mode   = 1;
     arm_cmd_send.arm_status  = ARM_RECYCLE;
     // arm_cmd_send.roll = arm_fetch_data.roll;
     // arm_cmd_send.lift = arm_fetch_data.height;
@@ -178,8 +178,8 @@ static void GetRockFromCar(void)
     arm_cmd_send.pitch_arm   = -1.04f;
     arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
     arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
-    arm_cmd_send.up_flag     = 1;
-    arm_cmd_send.roll_flag   = 1;
+    arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
+    arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
     arm_cmd_send.arm_status  = ARM_GETCARROCK;
 }
 /**
@@ -194,8 +194,8 @@ static void GetRockFromCar2(void)
     arm_cmd_send.pitch_arm   = -1.04f;
     arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
     arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
-    arm_cmd_send.up_flag     = 1;
-    arm_cmd_send.roll_flag   = 1;
+    arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
+    arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
     arm_cmd_send.arm_status  = ARM_GETCARROCK2;
 }
 
@@ -251,12 +251,10 @@ static void VideoAutoGet(void)
     }
     SuckerContorl();
 
-    if (video_data[TEMP].key_data.left_button_down) {
-        arm_cmd_send.up_flag = 1;
-    } else if (video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.up_flag = -1;
+    if (video_data[TEMP].key_data.left_button_down || video_data[TEMP].key_data.right_button_down) {
+        arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
     } else {
-        arm_cmd_send.up_flag = 0;
+        arm_cmd_send.lift_mode = LIFT_KEEP;
     }
     arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
 
@@ -286,21 +284,18 @@ static void VideoKey(void)
             GetRockFromCar();
             break;
     }
-    if (video_data[TEMP].key_data.left_button_down) {
-        arm_cmd_send.up_flag = 1;
-    } else if (video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.up_flag = -1;
+    if (video_data[TEMP].key_data.left_button_down || video_data[TEMP].key_data.right_button_down) {
+        arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
     } else {
-        arm_cmd_send.up_flag = 0;
+        arm_cmd_send.lift_mode = LIFT_KEEP;
     }
     arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
 
-    if (video_data[TEMP].key[KEY_PRESS].f) {
-        arm_cmd_send.roll_flag = -1;
-    } else if (video_data[TEMP].key[KEY_PRESS].g) {
-        arm_cmd_send.roll_flag = 1;
-    } else
-        arm_cmd_send.roll_flag = 0;
+    if (video_data[TEMP].key[KEY_PRESS].f || video_data[TEMP].key[KEY_PRESS].g) {
+        arm_cmd_send.roll_mode = ROLL_ANGLE_MODE;
+    } else {
+        arm_cmd_send.roll_mode = ROLL_KEEP;
+    }
     arm_cmd_send.roll = ((10.f * video_data[TEMP].key[KEY_PRESS].f) - (10.f * video_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
 
     DebugModeControl();
@@ -328,8 +323,8 @@ static void VideoCustom(void)
             arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
             arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
             arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 5;
-            arm_cmd_send.up_flag     = 1;
-            arm_cmd_send.roll_flag   = 1;
+            arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
+            arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
             arm_cmd_send.arm_status  = ARM_NORMAL;
             break;
         case 1:
@@ -365,28 +360,23 @@ static void VisionContorl(void)
         arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
         arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
         arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
-        // arm_cmd_send.up_flag     = 1;
-        // arm_cmd_send.lift        = vision_ctrl->z_height;
+        arm_cmd_send.lift_mode     = LIFT_ANGLE_MODE;
+        arm_cmd_send.lift        = vision_ctrl->z_height;
     } else {
         ArmKeep();
     }
 
     SuckerContorl();
 
-    if (video_data[TEMP].key_data.left_button_down) {
-        arm_cmd_send.up_flag = 1;
-    } else if (video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.up_flag = -1;
-    } else {
-        arm_cmd_send.up_flag = 0;
+    if (video_data[TEMP].key_data.left_button_down || video_data[TEMP].key_data.right_button_down) {
+        arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
     }
     arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
-    if (video_data[TEMP].key[KEY_PRESS].f)
-        arm_cmd_send.roll_flag = 1;
-    else if (video_data[TEMP].key[KEY_PRESS].g)
-        arm_cmd_send.roll_flag = -1;
-    else
-        arm_cmd_send.roll_flag = 0;
+    if (video_data[TEMP].key[KEY_PRESS].f || video_data[TEMP].key[KEY_PRESS].g) {
+        arm_cmd_send.roll_mode = ROLL_ANGLE_MODE;
+    } else {
+        arm_cmd_send.roll_mode = ROLL_KEEP;
+    }
     arm_cmd_send.roll          = arm_fetch_data.roll + 5 * (video_data[TEMP].key[KEY_PRESS].f - video_data[TEMP].key[KEY_PRESS].g);
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
@@ -414,8 +404,21 @@ static void VideoSlightlyContorl(void)
     // arm_cmd_send.lift        = angle_ref[5];
     arm_cmd_send.lift += video_data[TEMP].cus.height;
     // arm_cmd_send.roll += video_data[TEMP].cus.roll_arm_target;
-    arm_cmd_send.up_flag = 1;
+    arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
     SuckerContorl();
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
+}
+
+static void VideoHeigtInit(void)
+{
+    arm_cmd_send.arm_mode = ARM_LIFT_INIT;
+    if (video_data[TEMP].key_data.right_button_down) {
+        arm_cmd_send.lift_mode = LIFT_INIT_MODE;
+        arm_cmd_send.lift_init = 1;
+    } else {
+        arm_cmd_send.lift_mode = LIFT_KEEP;
+        arm_cmd_send.lift_init = 0;
+    }
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 #endif
@@ -424,13 +427,18 @@ static void VideoSlightlyContorl(void)
  * @brief 图传链路以及自定义控制器的模式和控制量设置
  *
  */
+#define ARM_MODE_COUNT 6
+static int mode = 0;
 static void VideoControlSet(void)
 {
     // 直接测试，稍后会添加到函数中
 #ifdef ARM_BOARD
     // 机械臂控制
+    mode = (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] -
+            video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_S] + 100 * ARM_MODE_COUNT) %
+           ARM_MODE_COUNT;
     // if (video_data[TEMP].custom_control_mode == 0) {
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] % 5) {
+    switch (mode) {
         case 0:
             VideoKey(); // 键盘控制
             // VisionContorl();
@@ -444,8 +452,13 @@ static void VideoControlSet(void)
         case 3:
             VideoSlightlyContorl(); // 轻微控制器
             break;
-        default:
+        case 4:
             VideoAutoGet(); // 一键取矿
+            break;
+        case 5:
+            VideoHeigtInit(); // 高度初始化
+            break;
+        default:
             break;
     }
     // } else {
@@ -459,12 +472,6 @@ static void VideoControlSet(void)
     VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
     VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
     VAL_LIMIT(arm_cmd_send.roll, ROLL_MIN, ROLL_MAX);
-
-    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
-        chassis_cmd_send.ui_mode = UI_REFRESH;
-    } else {
-        chassis_cmd_send.ui_mode = UI_KEEP;
-    }
 
 #endif
 
