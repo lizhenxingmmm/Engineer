@@ -105,6 +105,8 @@ void RobotCMDTask(void)
     chassis_cmd_send.arm_mode    = arm_cmd_send.arm_mode;
     chassis_cmd_send.sucker_mode = arm_cmd_send.sucker_mode;
     chassis_cmd_send.arm_status  = arm_cmd_send.arm_status;
+    chassis_cmd_send.max_arm     = arm_fetch_data.maximal_arm;
+    chassis_cmd_send.min_arm     = arm_fetch_data.minimal_arm;
 #ifdef ARM_BOARD
     // 发送给机械臂
     PubPushMessage(arm_cmd_pub, &arm_cmd_send);
@@ -249,7 +251,6 @@ static void VideoAutoGet(void)
             arm_cmd_send.pitch_arm   = 0.696f;
             break;
     }
-    SuckerContorl();
 
     if (video_data[TEMP].key_data.left_button_down || video_data[TEMP].key_data.right_button_down) {
         arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
@@ -298,8 +299,6 @@ static void VideoKey(void)
     }
     arm_cmd_send.roll = ((10.f * video_data[TEMP].key[KEY_PRESS].f) - (10.f * video_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
 
-    DebugModeControl();
-    SuckerContorl();
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -335,8 +334,6 @@ static void VideoCustom(void)
             break;
     }
 
-    SuckerContorl();
-
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -360,13 +357,11 @@ static void VisionContorl(void)
         arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
         arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
         arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
-        arm_cmd_send.lift_mode     = LIFT_ANGLE_MODE;
-        arm_cmd_send.lift        = vision_ctrl->z_height;
+        // arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
+        // arm_cmd_send.lift        = vision_ctrl->z_height;
     } else {
         ArmKeep();
     }
-
-    SuckerContorl();
 
     if (video_data[TEMP].key_data.left_button_down || video_data[TEMP].key_data.right_button_down) {
         arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
@@ -404,8 +399,7 @@ static void VideoSlightlyContorl(void)
     // arm_cmd_send.lift        = angle_ref[5];
     arm_cmd_send.lift += video_data[TEMP].cus.height;
     // arm_cmd_send.roll += video_data[TEMP].cus.roll_arm_target;
-    arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
-    SuckerContorl();
+    arm_cmd_send.lift_mode     = LIFT_ANGLE_MODE;
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
@@ -465,6 +459,8 @@ static void VideoControlSet(void)
     //     // 接收到自定义控制器命令，转为自定义控制器拨杆切换模式
     //     // code ...
     // }
+    DebugModeControl();
+    SuckerContorl();
 
     VAL_LIMIT(arm_cmd_send.maximal_arm, MAXARM_MIN, MAXARM_MAX);
     VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);

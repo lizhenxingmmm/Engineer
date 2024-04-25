@@ -64,6 +64,7 @@ typedef struct
     uint32_t arm_flag : 1;
     uint32_t sucker_flag : 1;
     uint32_t arm_status_flag : 1;
+    uint32_t arm_position_flag : 1;
 } Referee_Interactive_Flag_t;
 
 // 此结构体包含UI绘制与机器人车间通信的需要的其他非裁判系统数据
@@ -83,6 +84,8 @@ typedef struct
     arm_status_e arm_status;                 // 机械臂控制状态(状态子模式)
     uint8_t level;                           // 等级显示
     uint8_t is_tracking;                     // 视觉是否识别
+    float maximal_arm;                       // 机械臂大臂目标角度
+    float minimal_arm;                       // 机械臂小臂目标角度
 
     // 上一次的模式，用于flag判断
     chassis_mode_e chassis_last_mode;
@@ -98,6 +101,8 @@ typedef struct
     uint8_t level_last;
     uint8_t is_tracking_last;
     ui_mode_e ui_mode;
+    float maximal_arm_last; // 机械臂大臂目标角度
+    float minimal_arm_last; // 机械臂小臂目标角度
 
 } Referee_Interactive_info_t;
 

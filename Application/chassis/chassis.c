@@ -160,6 +160,8 @@ void ChassisTask()
     ui_data.arm_mode     = chassis_cmd_recv.arm_mode;
     ui_data.sucker_mode  = chassis_cmd_recv.sucker_mode;
     ui_data.arm_status   = chassis_cmd_recv.arm_status;
+    ui_data.maximal_arm  = chassis_cmd_recv.max_arm;
+    ui_data.minimal_arm  = chassis_cmd_recv.min_arm;
 #ifdef CHASSIS_BOARD
     UARTCommSend(chassis_usart_comm, (void *)&chassis_feedback_data);
 #endif
