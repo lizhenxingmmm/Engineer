@@ -23,24 +23,6 @@ static DJIMotor_Instance *lift, *roll;
 static int8_t is_init, lift_init_flag = 0;
 static float roll_init_angle, roll_real, lift_motor_init_angle, lift_init_height, height, lift_speed_feedfoward = 5.0f, lift_current_feedfoward = 1.f;
 
-static void ArmDMInit(void) // 非常抽象的函数，达妙电机不给值会回到原位，当然可以重新置零，但是工程的机械臂要限位？
-{
-    DMMotorSetRef(maximal_arm, maximal_arm->measure.position);
-    DMMotorSetSpeedRef(maximal_arm, 0.3);
-
-    DMMotorSetRef(minimal_arm, minimal_arm->measure.position);
-    DMMotorSetSpeedRef(minimal_arm, 4);
-
-    DMMotorSetRef(finesse, finesse->measure.position);
-    DMMotorSetSpeedRef(finesse, 1.5);
-
-    DMMotorSetRef(pitch_arm, pitch_arm->measure.position);
-    DMMotorSetSpeedRef(pitch_arm, 1.5);
-
-    arm_sub = SubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
-    arm_pub = PubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
-}
-
 static void Height_Calculation(void)
 {
     height = -(lift->measure.total_angle - lift_motor_init_angle) / LIFT_OFFSET - lift_init_height;
@@ -191,6 +173,14 @@ void ArmInit(void)
     roll = DJIMotorInit(&roll_config);
     HAL_TIM_Base_Start(&htim1); // 开启定时器1
     Sucker_Init();
+
+    DMMotorSetSpeedRef(maximal_arm, 0.3);
+    DMMotorSetSpeedRef(minimal_arm, 4);
+    DMMotorSetSpeedRef(finesse, 1.5);
+    DMMotorSetSpeedRef(pitch_arm, 1.5);
+
+    arm_sub = SubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
+    arm_pub = PubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
 }
 
 static void LiftHeightInit(int8_t _init_flag)
@@ -219,7 +209,6 @@ static void LiftHeightInit(int8_t _init_flag)
 void ARMTask(void)
 {
     if (!is_init) {
-        ArmDMInit();
         roll_init_angle       = roll->measure.total_angle; // min = -3460 - 165 max =4973 - 165
         lift_motor_init_angle = lift->measure.total_angle;
         is_init               = 1;

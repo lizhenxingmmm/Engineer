@@ -26,6 +26,9 @@ typedef struct
     float velocity;
     float last_position;
     float position;
+    float angle_single_round;
+    float total_angle;
+    float half_angle;
     float torque;
     float T_Mos;
     float T_Rotor;
@@ -36,6 +39,8 @@ typedef struct
 {
     uint16_t position_mit; // MIT模式下的位置值
     uint16_t velocity_mit; // MIT模式下的速度值
+    uint16_t position_torque; // MIT力控模式下的位置值
+    uint16_t velocity_torque; // MIT力控模式下的速度值
     float position_sp;     // 位置速度模式下的位置值
     float velocity_sp;     // 位置速度模式下的速度值
     uint16_t torque_des;
@@ -47,7 +52,10 @@ typedef struct
 {
     DM_Motor_Measure_s measure;
     Motor_Control_Setting_s motor_settings;
-    PID_Instance current_PID;
+    Motor_Controller_s motor_controller; // 电机设置
+    float pid_out;
+
+    PID_Instance torque_PID;
     PID_Instance speed_PID;
     PID_Instance angle_PID;
     float *other_angle_feedback_ptr;

@@ -31,6 +31,11 @@ static void DMMotorSetMode(DMMotor_Mode_e cmd, DM_MotorInstance *motor)
     CANTransmit(motor->motor_can_instace, 1);
 }
 
+/**
+ * @brief 解析达妙电机反馈数据
+ *
+ * @param motor_can 电机CAN实例
+ */
 static void DMMotorDecode(CAN_Instance *motor_can)
 {
     uint16_t tmp; // 用于暂存解析值,稍后转换成float数据,避免多次创建临时变量
@@ -40,9 +45,21 @@ static void DMMotorDecode(CAN_Instance *motor_can)
 
     DaemonReload(motor->motor_daemon);
 
+    measure->id            = rxbuff[0];
+    measure->state         = (rxbuff[0] >> 4) & 0xf;
     measure->last_position = measure->position;
     tmp                    = (uint16_t)((rxbuff[1] << 8) | rxbuff[2]);
     measure->position      = uint_to_float(tmp, DM_P_MIN, DM_P_MAX, 16);
+
+    if (measure->position < 0.0f)
+        measure->angle_single_round = measure->position / (4 * PI) * 360.0f + 360;
+    else
+        measure->angle_single_round = measure->position / (4 * PI) * 360.0f;
+    if (measure->position - measure->last_position > 2 * PI)
+        measure->total_round--;
+    else if (measure->position - measure->last_position < -2 * PI)
+        measure->total_round++;
+    measure->total_angle = measure->total_round * 2 * 360.0f + measure->position / (4 * PI) * 360.0f;
 
     tmp               = (uint16_t)((rxbuff[3] << 4) | rxbuff[4] >> 4);
     measure->velocity = uint_to_float(tmp, DM_V_MIN, DM_V_MAX, 12);
@@ -77,10 +94,17 @@ void DMMotorClearErr(DM_MotorInstance *motor)
     DWT_Delay(0.1);
 }
 
+/**
+ * @brief 根据电机控制模式配置CAN ID
+ *
+ * @param motor 电机实例
+ * @param config CAN初始化配置
+ */
 static void DMMotorConfigModel(DM_MotorInstance *motor, CAN_Init_Config_s *config)
 {
     switch (motor->control_type) {
         case MOTOR_CONTROL_MIT:
+        case MOTOR_CONTROL_MIT_ONLY_TORQUE:
             config->tx_id = config->tx_id;
             break;
         case MOTOR_CONTROL_POSITION_AND_SPEED:
@@ -106,6 +130,12 @@ static void DMMotorConfigModel(DM_MotorInstance *motor, CAN_Init_Config_s *confi
     }
 }
 
+/**
+ * @brief 达妙电机初始化,所有达妙电机都应该调用此函数进行初始化
+ *
+ * @param config 电机初始化配置
+ * @return DM_MotorInstance* 电机实例
+ */
 DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
 {
     DM_MotorInstance *motor = (DM_MotorInstance *)malloc(sizeof(DM_MotorInstance));
@@ -115,7 +145,7 @@ DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
         DWT_Delay(1);
 
     motor->motor_settings = config->controller_setting_init_config;
-    PIDInit(&motor->current_PID, &config->controller_param_init_config.current_PID);
+    PIDInit(&motor->torque_PID, &config->controller_param_init_config.torque_PID);
     PIDInit(&motor->speed_PID, &config->controller_param_init_config.speed_PID);
     PIDInit(&motor->angle_PID, &config->controller_param_init_config.angle_PID);
     motor->other_angle_feedback_ptr = config->controller_param_init_config.other_angle_feedback_ptr;
@@ -152,31 +182,66 @@ DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
     return motor;
 }
 
+/**
+ * @brief 设置电机位置参考值
+ *
+ * @param motor 电机实例
+ * @param ref 位置参考值
+ */
 void DMMotorSetRef(DM_MotorInstance *motor, float ref)
 {
     motor->pid_ref = ref;
 }
 
+/**
+ * @brief 设置电机速度参考值
+ *
+ * @param motor 电机实例
+ * @param ref 速度参考值
+ */
 void DMMotorSetSpeedRef(DM_MotorInstance *motor, float ref)
 {
     motor->speed_ref = ref;
 }
 
+/**
+ * @brief 电机使能
+ *
+ * @param motor 电机实例
+ */
 void DMMotorEnable(DM_MotorInstance *motor)
 {
     motor->stop_flag = MOTOR_ENALBED;
 }
 
+/**
+ * @brief 电机停止
+ *
+ * @param motor 电机实例
+ */
 void DMMotorStop(DM_MotorInstance *motor) // 不使用使能模式是因为需要收到反馈
 {
     motor->stop_flag = MOTOR_STOP;
 }
 
+/**
+ * @brief 设置电机外环控制模式
+ *
+ * @param motor 电机实例
+ * @param type 控制模式
+ */
 void DMMotorOuterLoop(DM_MotorInstance *motor, Closeloop_Type_e type)
 {
     motor->motor_settings.outer_loop_type = type;
 }
 
+/**
+ * @brief MIT模式下的电机控制
+ *
+ * @param motor 电机实例
+ * @param ref 位置参考值
+ * @param send 发送数据结构体
+ */
 static void DMMotorMITContoroll(DM_MotorInstance *motor, float ref, DMMotor_Send_s *send)
 {
     LIMIT_MIN_MAX(ref, DM_P_MIN, DM_P_MAX);
@@ -186,8 +251,8 @@ static void DMMotorMITContoroll(DM_MotorInstance *motor, float ref, DMMotor_Send
         send->Kp = float_to_uint(motor->mit_kp, DM_KP_MIN, DM_KP_MAX, 12);
         send->Kd = float_to_uint(motor->mit_kd, DM_KD_MIN, DM_KD_MAX, 12);
     } else {
-        send->Kp = float_to_uint(20.f, DM_KP_MIN, DM_KP_MAX, 12);
-        send->Kd = float_to_uint(5.f, DM_KD_MIN, DM_KD_MAX, 12);
+        send->Kp = float_to_uint(1.f, DM_KP_MIN, DM_KP_MAX, 12);
+        send->Kd = float_to_uint(1.f, DM_KD_MIN, DM_KD_MAX, 12);
     }
     send->torque_des = float_to_uint(0, DM_T_MIN, DM_T_MAX, 12);
 
@@ -204,6 +269,75 @@ static void DMMotorMITContoroll(DM_MotorInstance *motor, float ref, DMMotor_Send
     motor->motor_can_instace->tx_buff[7] = (uint8_t)(send->torque_des);
 }
 
+/**
+ * @brief 力控模式下的电机控制
+ *
+ * @param motor 电机实例
+ * @param ref 力参考值
+ * @param send 发送数据结构体
+ */
+static void DMMotorMITOnlyTorqueContoroll(DM_MotorInstance *motor, float ref, DMMotor_Send_s *send)
+{
+    float _pid_ref, _set;
+    DM_Motor_Measure_s *_measure;
+    Motor_Control_Setting_s *_setting;
+    Motor_Controller_s *_motor_controller; // 电机控制器
+    _measure          = &motor->measure;
+    _setting          = &motor->motor_settings;
+    _motor_controller = &motor->motor_controller;
+    _set              = ref;
+
+    if ((_setting->close_loop_type & ANGLE_LOOP) && (_setting->outer_loop_type & ANGLE_LOOP)) {
+        if (_setting->angle_feedback_source == OTHER_FEED) {
+            _set = PIDCalculate(&motor->angle_PID, *motor->other_angle_feedback_ptr, _set);
+        } else if (_setting->angle_feedback_source == MOTOR_FEED) {
+            _set = PIDCalculate(&motor->angle_PID, _measure->total_angle, _set);
+        }
+    }
+    if ((_setting->close_loop_type & SPEED_LOOP) && (_setting->outer_loop_type & (SPEED_LOOP | ANGLE_LOOP))) {
+        if (_setting->speed_feedback_source == OTHER_FEED) {
+            _set = PIDCalculate(&motor->speed_PID, *motor->other_speed_feedback_ptr, _set);
+        } else if (_setting->speed_feedback_source == MOTOR_FEED) {
+            _set = PIDCalculate(&motor->speed_PID, _measure->velocity, _set);
+        }
+        if (_setting->feedforward_flag & SPEED_FEEDFORWARD)
+            _set += *_motor_controller->speed_feedforward_ptr;
+    }
+
+    if ((_setting->close_loop_type & TORQUE_LOOP) && (_setting->outer_loop_type & (TORQUE_LOOP | SPEED_LOOP | ANGLE_LOOP))) {
+        _set = PIDCalculate(&motor->torque_PID, _measure->torque, _set);
+    }
+
+    _pid_ref              = _set;
+    motor->pid_out        = _set;
+    send->position_torque = float_to_uint(0, DM_P_MIN, DM_P_MAX, 16);
+    send->velocity_torque = float_to_uint(0, DM_V_MIN, DM_V_MAX, 12);
+    send->torque_des      = float_to_uint(_pid_ref, DM_T_MIN, DM_T_MAX, 12);
+    send->Kp              = 0;
+    send->Kd              = 0;
+    LIMIT_MIN_MAX(_pid_ref, DM_T_MIN, DM_T_MAX);
+
+    if (motor->stop_flag == MOTOR_STOP)
+        send->torque_des = float_to_uint(0, DM_T_MIN, DM_T_MAX, 12);
+
+    motor->motor_can_instace->tx_buff[0] = (uint8_t)(send->position_torque >> 8);
+    motor->motor_can_instace->tx_buff[1] = (uint8_t)(send->position_torque);
+    motor->motor_can_instace->tx_buff[2] = (uint8_t)(send->velocity_torque >> 4);
+    motor->motor_can_instace->tx_buff[3] = (uint8_t)(((send->velocity_torque & 0xF) << 4) | (send->Kp >> 8));
+    motor->motor_can_instace->tx_buff[4] = (uint8_t)(send->Kp);
+    motor->motor_can_instace->tx_buff[5] = (uint8_t)(send->Kd >> 4);
+    motor->motor_can_instace->tx_buff[6] = (uint8_t)(((send->Kd & 0xF) << 4) | (send->torque_des >> 8));
+    motor->motor_can_instace->tx_buff[7] = (uint8_t)(send->torque_des);
+}
+
+/**
+ * @brief 位置速度模式下的电机控制
+ *
+ * @param motor 电机实例
+ * @param pos_ref 位置参考值
+ * @param speed_ref 速度参考值
+ * @param send 发送数据结构体
+ */
 static void DMMotorPositonSpeedContoroll(DM_MotorInstance *motor, float pos_ref, float speed_ref, DMMotor_Send_s *send)
 {
 
@@ -215,7 +349,14 @@ static void DMMotorPositonSpeedContoroll(DM_MotorInstance *motor, float pos_ref,
     memcpy(motor->motor_can_instace->tx_buff, &send->position_sp, 4);
     memcpy(motor->motor_can_instace->tx_buff + 4, &send->velocity_sp, 4);
 }
-//@Todo: 目前只实现了力控，更多位控PID等请自行添加
+
+/**
+ * @brief 电机控制任务，每个初始化的达妙电机都有一个属于自己的任务
+ *
+ * @param argument 达妙电机实例
+ *
+ * @todo 目前实现了MIT模式和位置速度模式和力控模式，后续需要增加其他控制模式请自行添加
+ */
 void DMMotorTask(void const *argument)
 {
     float pid_ref, speed_ref;
@@ -238,6 +379,9 @@ void DMMotorTask(void const *argument)
             case MOTOR_CONTROL_POSITION_AND_SPEED:
                 DMMotorPositonSpeedContoroll(motor, pid_ref, speed_ref, &motor_send_mailbox);
                 break;
+            case MOTOR_CONTROL_MIT_ONLY_TORQUE:
+                DMMotorMITOnlyTorqueContoroll(motor, pid_ref, &motor_send_mailbox);
+                break;
             default:
                 break;
         }
@@ -246,6 +390,11 @@ void DMMotorTask(void const *argument)
         osDelay(2);
     }
 }
+/**
+ * @brief 达妙电机RTOS任务初始化，
+ *  因为每个电机都要延时2ms进行CAN发送，避免堵塞
+ *
+ */
 void DMMotorControlInit()
 {
     char dm_task_name[5] = "dm";

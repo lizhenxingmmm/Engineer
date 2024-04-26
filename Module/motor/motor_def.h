@@ -26,7 +26,7 @@ typedef enum {
     CURRENT_LOOP = 0b0001,
     SPEED_LOOP   = 0b0010,
     ANGLE_LOOP   = 0b0100,
-
+    TORQUE_LOOP  = 0b1000,
     // only for checking
     SPEED_AND_CURRENT_LOOP = 0b0011,
     ANGLE_AND_SPEED_LOOP   = 0b0110,
@@ -70,6 +70,7 @@ typedef enum {
     MOTOR_CONTROL_POSITION_AND_SPEED,
     MOTOR_CONTROL_SPEED,
     MOTOR_CONTROL_E_MIT,
+    MOTOR_CONTROL_MIT_ONLY_TORQUE,
 } Motor_Controll_Type_e;
 
 /* 电机控制设置,包括闭环类型,反转标志和反馈来源 */
@@ -127,6 +128,7 @@ typedef struct
     float *speed_feedforward_ptr;   // 速度前馈数据指针
     float *current_feedforward_ptr; // 电流前馈数据指针
 
+    PID_Init_Config_s torque_PID;
     PID_Init_Config_s current_PID;
     PID_Init_Config_s speed_PID;
     PID_Init_Config_s angle_PID;
