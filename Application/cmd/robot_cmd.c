@@ -353,12 +353,10 @@ static void VisionContorl(void)
         VisionSend(0);
     }
     if (vision_ctrl->is_tracking) {
-        arm_cmd_send.maximal_arm = vision_ctrl->maximal_arm + MAXARM_ZERO;
-        arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
-        arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
-        arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
-        // arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
-        // arm_cmd_send.lift        = vision_ctrl->z_height;
+    arm_cmd_send.maximal_arm = vision_ctrl->maximal_arm + MAXARM_ZERO;
+    arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
+    arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
+    arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
     } else {
         ArmKeep();
     }
