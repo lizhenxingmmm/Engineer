@@ -75,7 +75,7 @@ static void VideoRead(uint8_t *buff)
                 switch (video_ctrl[TEMP].CmdID) {
                     case ID_custom_robot_data: // 自定义数据
                         video_ctrl[TEMP].custom_control_mode = buff[DATA_Offset];
-                        if (buff[DATA_Offset] == 0x2A) // 0x2A为自定义微调数据
+                        if (buff[DATA_Offset] == 0x0B) // 0x2A为自定义微调数据
                         {
                             memcpy(&video_ctrl[TEMP].custom_data, (buff + DATA_Offset + 1), LEN_custom_robot_data);
                             memcpy(&video_ctrl[TEMP].scd, &video_ctrl[TEMP].custom_data, 24);

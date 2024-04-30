@@ -29,4 +29,7 @@ void scara_forward_kinematics(float angle1, float angle2, float L1, float L2, fl
 void GC_get_target_angles_slightly(slightly_controll_data data_pack, float result[6]);
 void StateInit(float angle1, float angle2, float angle3, float angle4, float z, float roll_angle);
 void RecordMode(uint8_t HeadByte);
+void GetCurrentState(float angle1, float angle2, float angle3, float angle4, float z, float roll_angle);
+void PushToCube(float result[6], float length);
+
 #endif

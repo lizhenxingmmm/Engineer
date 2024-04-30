@@ -52,28 +52,37 @@ void ArmInit(void)
             .rx_id      = 0x03, // Master ID 从3开始，因为发送id不能与接收id相同，
             .tx_id      = 1,    // MIT模式下为id，速度位置模式为0x100 + id
         },
-        .controller_param_init_config.dm_mit_PID = {
-            .Kp = 12,  // 20
-            .Kd = 2.8, // 达妙mit模式下的PID不需要Ki，千万不要kp = 0 && kd = 0
+        .controller_param_init_config = {
+            .dm_mit_PID = {
+                .Kp = 12,  // 20
+                .Kd = 2.8, // 达妙mit模式下的PID不需要Ki，千万不要kp = 0 && kd = 0
+            },
+            .angle_ramp = {
+                .rampTime = 0.006f, // 斜坡时间
+            },
         },
-        // 速度位置模式下不需要PID,喵老板真棒^^
-        // .control_type = MOTOR_CONTROL_POSITION_AND_SPEED,
+        .controller_setting_init_config = {
+            .angle_ramp_flag = MOTOR_RAMP_ENABLE,
+        }, // 速度位置模式下不需要PID,喵老板真棒^^
+           // .control_type = MOTOR_CONTROL_POSITION_AND_SPEED,
         .control_type = MOTOR_CONTROL_MIT,
         .motor_type   = DM8006,
     };
     maximal_arm = DMMotorInit(&motor_config);
 
-    motor_config.can_init_config.rx_id = 0x04;
-    motor_config.can_init_config.tx_id = 2;
-    motor_config.control_type          = MOTOR_CONTROL_POSITION_AND_SPEED;
-    motor_config.motor_type            = DM6006;
-    minimal_arm                        = DMMotorInit(&motor_config);
+    motor_config.can_init_config.rx_id                            = 0x04;
+    motor_config.can_init_config.tx_id                            = 2;
+    motor_config.controller_param_init_config.angle_ramp.rampTime = 0.006f;
+    motor_config.control_type                                     = MOTOR_CONTROL_POSITION_AND_SPEED;
+    motor_config.motor_type                                       = DM6006;
+    minimal_arm                                                   = DMMotorInit(&motor_config);
 
-    motor_config.can_init_config.can_handle = &hcan2;
-    motor_config.can_init_config.rx_id      = 0x03;
-    motor_config.can_init_config.tx_id      = 1;
-    motor_config.motor_type                 = DM4310;
-    finesse                                 = DMMotorInit(&motor_config);
+    motor_config.can_init_config.can_handle                     = &hcan2;
+    motor_config.can_init_config.rx_id                          = 0x03;
+    motor_config.can_init_config.tx_id                          = 1;
+    motor_config.controller_setting_init_config.angle_ramp_flag = MOTOR_RAMP_DISABLE;
+    motor_config.motor_type                                     = DM4310;
+    finesse                                                     = DMMotorInit(&motor_config);
 
     motor_config.can_init_config.rx_id = 0x04;
     motor_config.can_init_config.tx_id = 2;
@@ -198,6 +207,18 @@ static void LiftHeightInit(int8_t _init_flag)
     }
 }
 
+static uint8_t ARMPositionCheck(float maximal_arm_ref, float minimal_arm_ref, float finesse_ref, float pitch_arm_ref)
+{
+    if (DMMotorPositionCheck(maximal_arm, maximal_arm_ref) &&
+        DMMotorPositionCheck(minimal_arm, minimal_arm_ref) &&
+        DMMotorPositionCheck(finesse, finesse_ref) &&
+        DMMotorPositionCheck(pitch_arm, pitch_arm_ref)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 // lift的机械距离大约350mm 最高机械角度-64948 最低机械角度 22115
 // 机械行程 87063度
 // 读角度时init角度应位于最高点 init角度对应350mm 最低点为init角度-87063 对应0mm
@@ -231,11 +252,19 @@ void ARMTask(void)
         DJIMotorEnable(roll);
     }
 
+    if (arm_cmd_recv.arm_mode == ARM_HUM_CONTORL &&
+        minimal_arm->measure.position >= 0.3f) {
+        DMMotorRampEnable(maximal_arm);
+        DMMotorRampEnable(minimal_arm);
+    } else {
+        DMMotorRampDisable(maximal_arm);
+        DMMotorRampDisable(minimal_arm);
+    }
     VAL_LIMIT(arm_cmd_recv.maximal_arm, MAXARM_MIN, MAXARM_MAX);
     VAL_LIMIT(arm_cmd_recv.minimal_arm, MINARM_MIN, MINARM_MAX);
     VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN, FINE_MAX);
     VAL_LIMIT(arm_cmd_recv.pitch_arm, PITCH_MIN, PITCH_MAX);
-    VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
+    // VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
     DMMotorSetRef(maximal_arm, arm_cmd_recv.maximal_arm); // MIN -1.0,MAX 0.75
     DMMotorSetRef(minimal_arm, arm_cmd_recv.minimal_arm); // MIN -2.0,MAX 2.7
     DMMotorSetRef(finesse, arm_cmd_recv.finesse);         // MIN -1.6,MAX 1.9

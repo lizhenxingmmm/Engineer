@@ -308,23 +308,38 @@ static void VideoKey(void)
  */
 static void VideoCustom(void)
 {
+    float angle_ref[6];
     arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
     if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
         ArmKeep();
         video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] = 0; // 清零，确保每次都从初始状态开始
     }
-
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3) {
         case 0:
             arm_cmd_send.maximal_arm = video_data[TEMP].cus.maximal_arm_target;
             arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
             arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target * 1.2;
             arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
-            arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
+            arm_cmd_send.lift        = -(video_data[TEMP].cus.height * 2);
             arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 5;
-            arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
+            arm_cmd_send.lift_mode   = LIFT_SPEED_MODE;
             arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
             arm_cmd_send.arm_status  = ARM_NORMAL;
+            if (video_data[TEMP].key[KEY_PRESS].c) {
+                if (video_data[LAST].key[KEY_PRESS].c == 0) {
+                    GetCurrentState(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, arm_fetch_data.roll);
+                }
+                PushToCube(angle_ref, 100);
+                arm_cmd_send.maximal_arm = angle_ref[0];
+                arm_cmd_send.minimal_arm = angle_ref[1];
+                arm_cmd_send.finesse     = angle_ref[2];
+                arm_cmd_send.pitch_arm   = angle_ref[3];
+                arm_cmd_send.lift        = angle_ref[5];
+                arm_cmd_send.roll        = angle_ref[4];
+                arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
+                arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
+                arm_cmd_send.arm_status  = ARM_NORMAL;
+            }
             break;
         case 1:
             GetRockFromCar();
@@ -353,10 +368,10 @@ static void VisionContorl(void)
         VisionSend(0);
     }
     if (vision_ctrl->is_tracking) {
-    arm_cmd_send.maximal_arm = vision_ctrl->maximal_arm + MAXARM_ZERO;
-    arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
-    arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
-    arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
+        arm_cmd_send.maximal_arm = vision_ctrl->maximal_arm + MAXARM_ZERO;
+        arm_cmd_send.minimal_arm = vision_ctrl->minimal_arm + MINARM_ZERO;
+        arm_cmd_send.finesse     = vision_ctrl->finesse + FINE_ZERO;
+        arm_cmd_send.pitch_arm   = vision_ctrl->pitch_arm + PITCH_ZERO;
     } else {
         ArmKeep();
     }
@@ -393,10 +408,10 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.minimal_arm = angle_ref[1];
     arm_cmd_send.finesse     = angle_ref[2];
     arm_cmd_send.pitch_arm   = angle_ref[3];
-    // arm_cmd_send.roll        = angle_ref[4];
-    // arm_cmd_send.lift        = angle_ref[5];
-    arm_cmd_send.lift += video_data[TEMP].cus.height;
-    // arm_cmd_send.roll += video_data[TEMP].cus.roll_arm_target;
+    arm_cmd_send.roll        = angle_ref[4];
+    arm_cmd_send.lift        = angle_ref[5];
+    // arm_cmd_send.lift += video_data[TEMP].cus.height;
+    //  arm_cmd_send.roll += video_data[TEMP].cus.roll_arm_target;
     arm_cmd_send.lift_mode     = LIFT_ANGLE_MODE;
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
@@ -464,7 +479,8 @@ static void VideoControlSet(void)
     VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
     VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
     VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
-    VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
+    if (arm_cmd_send.lift_mode == LIFT_ANGLE_MODE)
+        VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
     VAL_LIMIT(arm_cmd_send.roll, ROLL_MIN, ROLL_MAX);
 
 #endif
