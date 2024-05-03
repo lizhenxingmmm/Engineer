@@ -192,7 +192,7 @@ void ArmInit(void)
     DMMotorSetSpeedRef(maximal_arm, 0.3);
     DMMotorSetSpeedRef(minimal_arm, 4);
     DMMotorSetSpeedRef(finesse, 1.5);
-    DMMotorSetSpeedRef(pitch_arm, 1.5);
+    DMMotorSetSpeedRef(pitch_arm, 3.5);
 
     arm_sub = SubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_pub = PubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
