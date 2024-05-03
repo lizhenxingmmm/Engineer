@@ -43,6 +43,11 @@ static void Sucker_Init(void)
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 }
 
+static void VideoDeviceInit(void)
+{
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2); //?????????1??PWM???
+}
+
 void ArmInit(void)
 {
     // 初始化机械臂
@@ -182,6 +187,7 @@ void ArmInit(void)
     roll = DJIMotorInit(&roll_config);
     HAL_TIM_Base_Start(&htim1); // 开启定时器1
     Sucker_Init();
+    VideoDeviceInit();
 
     DMMotorSetSpeedRef(maximal_arm, 0.3);
     DMMotorSetSpeedRef(minimal_arm, 4);
@@ -264,7 +270,7 @@ void ARMTask(void)
     VAL_LIMIT(arm_cmd_recv.minimal_arm, MINARM_MIN, MINARM_MAX);
     VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN, FINE_MAX);
     VAL_LIMIT(arm_cmd_recv.pitch_arm, PITCH_MIN, PITCH_MAX);
-    // VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
+    VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
     DMMotorSetRef(maximal_arm, arm_cmd_recv.maximal_arm); // MIN -1.0,MAX 0.75
     DMMotorSetRef(minimal_arm, arm_cmd_recv.minimal_arm); // MIN -2.0,MAX 2.7
     DMMotorSetRef(finesse, arm_cmd_recv.finesse);         // MIN -1.6,MAX 1.9
@@ -319,6 +325,8 @@ void ARMTask(void)
     } else {
         __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 1000);
     }
+
+    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 1200); // 舵机90度
 
     if (arm_cmd_recv.download_mode == DOWNLOAD_ON) {
         DJIMotorStop(lift);

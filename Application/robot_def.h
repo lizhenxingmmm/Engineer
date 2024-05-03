@@ -44,10 +44,10 @@
 #define MINARM_MIN    -1.9f
 #define MINARM_MAX    2.7f
 #define FINE_MIN      -1.6f
-#define FINE_MAX      1.9f
+#define FINE_MAX      2.2f
 #define PITCH_MIN     -1.05f
 #define PITCH_MAX     1.2f
-#define HEIGHT_MIN    -8.f
+#define HEIGHT_MIN    -250.f
 #define HEIGHT_MAX    260.f // 50
 #define ROLL_MIN      -180.f
 #define ROLL_MAX      180.f
@@ -190,6 +190,17 @@ typedef enum {
     DOWNLOAD_ON,      // 开启调试模式,用于控制大疆电机的调试，防止下载时电机转动
 } download_mode_e;
 
+// 图传的角度设置？先凑合用用
+typedef enum {
+    PITCH_0   = 0,
+    PITCH_30  = 30,  // 30度
+    PITCH_60  = 60,  // 60度
+    PITCH_90  = 90,  // 90度
+    PITCH_120 = 120, // 120度
+    PITCH_150 = 150, // 150度
+    PITCH_180 = 180, // 180度
+} video_angle_e;
+
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
 /**
  * @brief 对于双板情况,pc在云台,遥控器和裁判系统在底盘
@@ -232,6 +243,7 @@ typedef struct
     arm_mode_e arm_mode_last;      // 机械臂上一次状态
     arm_status_e arm_status;       // 机械臂控制状态(状态子模式)
     download_mode_e download_mode; // 下载模式
+    video_angle_e video_angle;     // 图传角度,理论上不应该在这，但没必要专门为了一个舵机开一个topic
     int8_t lift_init;              // 机械臂初始化
 } Arm_Ctrl_Cmd_s;
 

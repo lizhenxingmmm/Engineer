@@ -320,9 +320,9 @@ static void VideoCustom(void)
             arm_cmd_send.minimal_arm = video_data[TEMP].cus.minimal_arm_target;
             arm_cmd_send.finesse     = video_data[TEMP].cus.finesse_target * 1.2;
             arm_cmd_send.pitch_arm   = video_data[TEMP].cus.pitch_arm_target;
-            arm_cmd_send.lift        = -(video_data[TEMP].cus.height * 2);
+            arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
             arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 5;
-            arm_cmd_send.lift_mode   = LIFT_SPEED_MODE;
+            arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
             arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
             arm_cmd_send.arm_status  = ARM_NORMAL;
             if (video_data[TEMP].key[KEY_PRESS].c) {
@@ -419,13 +419,27 @@ static void VideoSlightlyContorl(void)
 static void VideoHeigtInit(void)
 {
     arm_cmd_send.arm_mode = ARM_LIFT_INIT;
-    if (video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.lift_mode = LIFT_INIT_MODE;
-        arm_cmd_send.lift_init = 1;
-    } else {
-        arm_cmd_send.lift_mode = LIFT_KEEP;
-        arm_cmd_send.lift_init = 0;
+    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
+        case 0:
+            if (video_data[TEMP].key_data.right_button_down) {
+                arm_cmd_send.lift_mode = LIFT_INIT_MODE;
+                arm_cmd_send.lift_init = 1;
+            } else {
+                arm_cmd_send.lift_mode = LIFT_KEEP;
+                arm_cmd_send.lift_init = 0;
+            }
+            break;
+        default:
+            if (video_data[TEMP].cus.height > 0) {
+                arm_cmd_send.lift_mode = LIFT_INIT_MODE;
+                arm_cmd_send.lift_init = 1;
+            } else {
+                arm_cmd_send.lift_mode = LIFT_KEEP;
+                arm_cmd_send.lift_init = 0;
+            }
+            break;
     }
+
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 #endif
@@ -504,7 +518,7 @@ static void VideoControlSet(void)
         chassis_cmd_send.ui_mode = UI_KEEP;
     }
 
-    chassis_cmd_send.vx = (video_data[TEMP].key[KEY_PRESS].a - video_data[TEMP].key[KEY_PRESS].d) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
+    chassis_cmd_send.vx = (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
     chassis_cmd_send.vy = (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测                                                                                                         // test
     chassis_cmd_send.wz = (float)video_data[TEMP].key_data.mouse_x * 10 +
                           (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 26000 * chassis_cmd_send.chassis_speed_buff;
