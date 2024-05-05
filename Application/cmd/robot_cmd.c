@@ -310,7 +310,7 @@ static void VideoCustom(void)
 {
     float angle_ref[6];
     static float PushLength;
-    float temp_xy[2];
+    // float temp_xy[2];
     arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
     if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
         ArmKeep();
@@ -327,14 +327,14 @@ static void VideoCustom(void)
             arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
             arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
             arm_cmd_send.arm_status  = ARM_NORMAL;
-            //保持吸盘位置高度
-            arm_cmd_send.lift+=sin(arm_fetch_data.pitch_arm-PITCH_ZERO_POINT)*ARMLENGHT3;
+            // 保持吸盘位置高度
+            // arm_cmd_send.lift += sin(arm_fetch_data.pitch_arm - PITCH_ZERO_POINT) * ARMLENGHT3;
             if (video_data[TEMP].key[KEY_PRESS].c) {
                 if (video_data[LAST].key[KEY_PRESS].c == 0) {
-                    PushLength=0;
+                    PushLength = 0;
                     GetCurrentState(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, arm_fetch_data.roll);
                 }
-                PushLength+=0.1;
+                PushLength += 0.1;
                 PushToCube(angle_ref, PushLength);
                 arm_cmd_send.maximal_arm = angle_ref[0];
                 arm_cmd_send.minimal_arm = angle_ref[1];
@@ -502,6 +502,15 @@ static void VideoControlSet(void)
     if (arm_cmd_send.lift_mode == LIFT_ANGLE_MODE)
         VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
     VAL_LIMIT(arm_cmd_send.roll, ROLL_MIN, ROLL_MAX);
+
+    switch (video_data[TEMP].key_count[KEY_PRESS][Key_V] % 2) {
+        case 0:
+            arm_cmd_send.video_angle = PITCH_90;
+            break;
+        default:
+            arm_cmd_send.video_angle = PITCH_120;
+            break;
+    }
 
 #endif
 

@@ -213,7 +213,7 @@ static void LiftHeightInit(int8_t _init_flag)
     }
 }
 
-static uint8_t ARMPositionCheck(float maximal_arm_ref, float minimal_arm_ref, float finesse_ref, float pitch_arm_ref)
+__attribute__((used)) static uint8_t ARMPositionCheck(float maximal_arm_ref, float minimal_arm_ref, float finesse_ref, float pitch_arm_ref)
 {
     if (DMMotorPositionCheck(maximal_arm, maximal_arm_ref) &&
         DMMotorPositionCheck(minimal_arm, minimal_arm_ref) &&
@@ -258,8 +258,8 @@ void ARMTask(void)
         DJIMotorEnable(roll);
     }
 
-    if (arm_cmd_recv.arm_mode == ARM_HUM_CONTORL &&
-        minimal_arm->measure.position >= 0.3f) {
+    if ((arm_cmd_recv.arm_mode == ARM_HUM_CONTORL &&
+        minimal_arm->measure.position >= 0.3f) || arm_cmd_recv.arm_mode == ARM_AUTO_CONTORL) {
         DMMotorRampEnable(maximal_arm);
         DMMotorRampEnable(minimal_arm);
     } else {
@@ -326,7 +326,16 @@ void ARMTask(void)
         __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 1000);
     }
 
-    __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 1200); // 舵机90度
+    switch (arm_cmd_recv.video_angle) {
+        case PITCH_90:
+            __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 2130); // 舵机90度 // 2130
+            break;
+        case PITCH_120:
+            __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 2400); // 舵机120度 // 2400
+            break;
+        default:
+            break;
+    }
 
     if (arm_cmd_recv.download_mode == DOWNLOAD_ON) {
         DJIMotorStop(lift);
