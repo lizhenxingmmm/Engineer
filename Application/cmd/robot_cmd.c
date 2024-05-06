@@ -329,13 +329,13 @@ static void VideoCustom(void)
             arm_cmd_send.arm_status  = ARM_NORMAL;
             // 保持吸盘位置高度
             // arm_cmd_send.lift += sin(arm_fetch_data.pitch_arm - PITCH_ZERO_POINT) * ARMLENGHT3;
-            if (video_data[TEMP].key[KEY_PRESS].c) {
-                if (video_data[LAST].key[KEY_PRESS].c == 0) {
-                    PushLength = 0;
-                    GetCurrentState(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, arm_fetch_data.roll);
-                }
-                PushLength += 0.1;
-                PushToCube(angle_ref, PushLength);
+            // if (video_data[TEMP].key[KEY_PRESS].c) {
+            //     if (video_data[LAST].key[KEY_PRESS].c == 0) {
+            //         PushLength = 0;
+            //         GetCurrentState(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, arm_fetch_data.roll);
+            //     }
+            //     PushLength += 0.1;
+            //     PushToCube(angle_ref, PushLength);
                 arm_cmd_send.maximal_arm = angle_ref[0];
                 arm_cmd_send.minimal_arm = angle_ref[1];
                 arm_cmd_send.finesse     = angle_ref[2];
