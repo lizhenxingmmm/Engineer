@@ -308,8 +308,8 @@ static void VideoKey(void)
  */
 static void VideoCustom(void)
 {
-    float angle_ref[6];
-    static float PushLength;
+    // float angle_ref[6];
+    // static float PushLength;
     // float temp_xy[2];
     arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
     if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
@@ -336,16 +336,16 @@ static void VideoCustom(void)
             //     }
             //     PushLength += 0.1;
             //     PushToCube(angle_ref, PushLength);
-                arm_cmd_send.maximal_arm = angle_ref[0];
-                arm_cmd_send.minimal_arm = angle_ref[1];
-                arm_cmd_send.finesse     = angle_ref[2];
-                arm_cmd_send.pitch_arm   = angle_ref[3];
-                arm_cmd_send.lift        = angle_ref[5];
-                arm_cmd_send.roll        = angle_ref[4];
-                arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
-                arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
-                arm_cmd_send.arm_status  = ARM_NORMAL;
-            }
+            //     arm_cmd_send.maximal_arm = angle_ref[0];
+            //     arm_cmd_send.minimal_arm = angle_ref[1];
+            //     arm_cmd_send.finesse     = angle_ref[2];
+            //     arm_cmd_send.pitch_arm   = angle_ref[3];
+            //     arm_cmd_send.lift        = angle_ref[5];
+            //     arm_cmd_send.roll        = angle_ref[4];
+            //     arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
+            //     arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
+            //     arm_cmd_send.arm_status  = ARM_NORMAL;
+            // }
             break;
         case 1:
             GetRockFromCar();
