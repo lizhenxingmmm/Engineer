@@ -402,9 +402,11 @@ static void VisionContorl(void)
 static void VideoSlightlyContorl(void)
 {
     arm_cmd_send.arm_mode = ARM_SLIGHTLY_CONTROL;
+    static float remenber_finesse_angle;
     if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
         StateInit(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, arm_fetch_data.finesse, arm_fetch_data.pitch_arm, arm_fetch_data.height, 0);
         arm_cmd_send.arm_status = ARM_NORMAL;
+        remenber_finesse_angle  = arm_fetch_data.maximal_arm + arm_fetch_data.minimal_arm + arm_fetch_data.finesse;
     }
 
     float angle_ref[6];
@@ -412,8 +414,8 @@ static void VideoSlightlyContorl(void)
     GC_get_target_angles_slightly(video_data[TEMP].scd, angle_ref);
     arm_cmd_send.maximal_arm = angle_ref[0];
     arm_cmd_send.minimal_arm = angle_ref[1];
-    arm_cmd_send.finesse     = angle_ref[2];
-    arm_cmd_send.pitch_arm   = angle_ref[3];
+    arm_cmd_send.finesse     = remenber_finesse_angle - arm_fetch_data.maximal_arm - arm_fetch_data.minimal_arm;
+    //arm_cmd_send.pitch_arm   = angle_ref[3];
     arm_cmd_send.roll        = angle_ref[4];
     arm_cmd_send.lift        = angle_ref[5];
     // arm_cmd_send.lift += video_data[TEMP].cus.height;
