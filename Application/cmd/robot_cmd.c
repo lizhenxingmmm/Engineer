@@ -415,16 +415,16 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.maximal_arm = angle_ref[0];
     arm_cmd_send.minimal_arm = angle_ref[1];
     arm_cmd_send.finesse     = remenber_finesse_angle - arm_fetch_data.maximal_arm - arm_fetch_data.minimal_arm;
-    //arm_cmd_send.pitch_arm   = angle_ref[3];
-    arm_cmd_send.roll        = angle_ref[4];
-    arm_cmd_send.lift        = angle_ref[5];
+    // arm_cmd_send.pitch_arm   = angle_ref[3];
+    arm_cmd_send.roll = angle_ref[4];
+    arm_cmd_send.lift = angle_ref[5];
     // arm_cmd_send.lift += video_data[TEMP].cus.height;
     //  arm_cmd_send.roll += video_data[TEMP].cus.roll_arm_target;
     arm_cmd_send.lift_mode     = LIFT_ANGLE_MODE;
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
-static void VideoHeigtInit(void)
+__attribute__((used)) static void VideoHeigtInit(void)
 {
     arm_cmd_send.arm_mode = ARM_LIFT_INIT;
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
@@ -463,9 +463,16 @@ static void VideoControlSet(void)
     // 直接测试，稍后会添加到函数中
 #ifdef ARM_BOARD
     // 机械臂控制
-    mode = (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] -
-            video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_S] + 100 * ARM_MODE_COUNT) %
-           ARM_MODE_COUNT;
+    switch (video_data[TEMP].key_count[KEY_PRESS][Key_B] % 2) {
+        case 0:
+            mode = (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] -
+                    video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_S] + 100 * ARM_MODE_COUNT) %
+                   ARM_MODE_COUNT;
+            break;
+        default:
+            mode = 999;
+            break;
+    }
     // if (video_data[TEMP].custom_control_mode == 0) {
     switch (mode) {
         case 0:
@@ -481,12 +488,12 @@ static void VideoControlSet(void)
         case 3:
             VideoSlightlyContorl(); // 轻微控制器
             break;
-        case 4:
+        case 999:
             VideoAutoGet(); // 一键取矿
             break;
-        case 5:
-            VideoHeigtInit(); // 高度初始化
-            break;
+        // case 5:
+        //     VideoHeigtInit(); // 高度初始化
+        //     break;
         default:
             break;
     }

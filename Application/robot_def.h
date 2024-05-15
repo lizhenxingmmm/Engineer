@@ -45,8 +45,8 @@
 #define MINARM_MAX    2.7f
 #define FINE_MIN      -1.6f
 #define FINE_MAX      2.2f
-#define PITCH_MIN     -1.05f
-#define PITCH_MAX     1.8f
+#define PITCH_MIN     -0.46f
+#define PITCH_MAX     2.49f
 #define HEIGHT_MIN    -550.f
 #define HEIGHT_MAX    560.f // 50
 #define ROLL_MIN      -180.f
