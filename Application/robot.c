@@ -5,6 +5,7 @@
 #include "arm.h"
 #include "test.h"
 #include "chassis.h"
+#include "transform.h"
 
 #include "bsp_init.h"
 
@@ -35,6 +36,7 @@ void RobotInit(void)
 #endif // ARM_BOARD
     // 底盘初始化
 #ifdef CHASSIS_BOARD
+    TransformInit();
     ChassisInit();
 #endif // CHASSIS_BOARD
 
@@ -62,6 +64,7 @@ void RobotTask()
 #endif // ARM_BOARD
     // 底盘任务
 #ifdef CHASSIS_BOARD
+    TransformTask();
     ChassisTask();
 #endif // CHASSIS_BOARD
 }

@@ -113,7 +113,8 @@
           "Application/arm",
           "Application/chassis",
           "Module/scara_kinematics",
-          "Module/UARTComm"
+          "Module/UARTComm",
+          "Application/transform"
         ],
         "libList": [
           "Middlewares/ST/ARM/DSP/Lib"
