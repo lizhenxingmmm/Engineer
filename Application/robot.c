@@ -27,9 +27,10 @@ void RobotInit(void)
     // BSP初始化
     BSPInit();
     // 应用层初始化
-    RobotCMDInit();
+
 // 机械臂初始化
 #ifdef ARM_BOARD
+    RobotCMDInit();
     ArmInit();
 #endif // ARM_BOARD
     // 底盘初始化
@@ -53,9 +54,10 @@ void RobotInit(void)
 void RobotTask()
 {
     // 应用层任务
-    RobotCMDTask();
+
     // 机械臂任务
 #ifdef ARM_BOARD
+    RobotCMDTask();
     ARMTask();
 #endif // ARM_BOARD
     // 底盘任务

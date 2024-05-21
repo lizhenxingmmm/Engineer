@@ -77,13 +77,13 @@ void MyUIInit()
     // 绘制车辆状态标志指示
     UICharDraw(&UI_State_sta[0], "ss0", UI_Graph_ADD, 8, UI_Color_Main, 15, 2, 150, 800, "level:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[0]);
-    UICharDraw(&UI_State_sta[1], "ss1", UI_Graph_ADD, 8, UI_Color_Main, 15, 2, 150, 750, "chassis:");
+    UICharDraw(&UI_State_sta[1], "ss1", UI_Graph_ADD, 8, UI_Color_Main, 15, 2, 100, 750, "C chassis:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[1]);
-    UICharDraw(&UI_State_sta[2], "ss2", UI_Graph_ADD, 8, UI_Color_Yellow, 15, 2, 150, 700, "arm:");
+    UICharDraw(&UI_State_sta[2], "ss2", UI_Graph_ADD, 8, UI_Color_Yellow, 15, 2, 100, 700, "XSarm:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[2]);
-    UICharDraw(&UI_State_sta[3], "ss3", UI_Graph_ADD, 8, UI_Color_Orange, 15, 2, 150, 650, "sucker:");
+    UICharDraw(&UI_State_sta[3], "ss3", UI_Graph_ADD, 8, UI_Color_Orange, 15, 2, 100, 650, " R sucker:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[3]);
-    UICharDraw(&UI_State_sta[4], "ss4", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 150, 600, "state:");
+    UICharDraw(&UI_State_sta[4], "ss4", UI_Graph_ADD, 8, UI_Color_Pink, 15, 2, 100, 600, "Z state:");
     UICharRefresh(&referee_recv_info->referee_id, UI_State_sta[4]);
     // 绘制车辆状态标志，动态
     // 由于初始化时xxx_last_mode默认为0，所以此处对应UI也应该设为0时对应的UI，防止模式不变的情况下无法置位flag，导致UI无法刷新

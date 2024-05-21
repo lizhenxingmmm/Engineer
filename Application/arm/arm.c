@@ -331,7 +331,7 @@ void ARMTask(void)
             __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 2130); // 舵机90度 // 2130
             break;
         case PITCH_120:
-            __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 2400); // 舵机120度 // 2400
+            __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_2, 2600); // 舵机120度 // 2400
             break;
         default:
             break;

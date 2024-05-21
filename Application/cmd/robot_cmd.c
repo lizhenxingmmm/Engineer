@@ -26,16 +26,16 @@
 #include "scara_kinematics.h"
 #include "arm_math.h"
 #include "UARTComm.h"
-#ifdef CHASSIS_BOARD
-static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
-static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
-#endif
-#ifdef ARM_BOARD
+// #ifdef CHASSIS_BOARD
+// static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
+// static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
+// #endif
+
 static Publisher_t *arm_cmd_pub;         // 底盘控制消息发布者
 static Subscriber_t *arm_feed_sub;       // 底盘反馈信息订阅者
 static Vision_Recv_s *vision_ctrl;       // 视觉控制信息
 static UARTComm_Instance *cmd_uart_comm; // 双板通信
-#endif
+
 static Chassis_Ctrl_Cmd_s chassis_cmd_send;       // 发送给底盘应用的信息,包括控制信息和UI绘制相关
 static Chassis_Upload_Data_s chassis_fetch_data;  // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
 static Arm_Ctrl_Cmd_s arm_cmd_send;               // 发送给机械臂的信息
@@ -54,7 +54,7 @@ static Video_ctrl_t *video_data; // 视觉数据指针,初始化时返回
  */
 void RobotCMDInit(void)
 {
-#ifdef ARM_BOARD
+
     UARTComm_Init_Config_s ucomm_config = {
         .uart_handle    = &huart1,
         .recv_data_len  = sizeof(Chassis_Upload_Data_s),
@@ -68,14 +68,6 @@ void RobotCMDInit(void)
 
     arm_cmd_pub  = PubRegister("arm_cmd", sizeof(Arm_Ctrl_Cmd_s));
     arm_feed_sub = SubRegister("arm_feed", sizeof(Arm_Upload_Data_s));
-#endif // ARM_BOARD
-
-#ifdef CHASSIS_BOARD
-    // 初始化遥控器,使用串口3
-    rc_data          = RemoteControlInit(&huart3); // 初始化遥控器,C板上使用USART3
-    chassis_cmd_pub  = PubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
-    chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
-#endif // CHASSIS_BOARD
 
     // 此处初始化与视觉的通信
 }
@@ -84,21 +76,21 @@ void RobotCMDInit(void)
 void RobotCMDTask(void)
 {
     // 获取各个模块的数据
-#ifdef CHASSIS_BOARD
-    // 获取底盘反馈信息
-    SubGetMessage(chassis_feed_sub, &chassis_fetch_data);
-#endif
-#ifdef ARM_BOARD
+    // #ifdef CHASSIS_BOARD
+    //     // 获取底盘反馈信息
+    //     SubGetMessage(chassis_feed_sub, &chassis_fetch_data);
+    // #endif
+
     // 获取机械臂反馈信息
     SubGetMessage(arm_feed_sub, &arm_fetch_data);
     chassis_fetch_data = *(Chassis_Upload_Data_s *)UARTCommGet(cmd_uart_comm);
-#endif
+
     if (!rc_data[TEMP].rc.switch_right ||
         switch_is_down(rc_data[TEMP].rc.switch_right)) // 当收不到遥控器信号时，使用图传链路
         VideoControlSet();
     else if (switch_is_mid(rc_data[TEMP].rc.switch_right)) // 当收到遥控器信号时,且右拨杆为中，使用遥控器
-        RemoteControlSet();
-    else if (switch_is_up(rc_data[TEMP].rc.switch_right))
+    {                                                      // RemoteControlSet();
+    } else if (switch_is_up(rc_data[TEMP].rc.switch_right))
         EmergencyHandler();
 
     // 发送控制信息
@@ -107,15 +99,10 @@ void RobotCMDTask(void)
     chassis_cmd_send.arm_status  = arm_cmd_send.arm_status;
     chassis_cmd_send.max_arm     = arm_fetch_data.maximal_arm;
     chassis_cmd_send.min_arm     = arm_fetch_data.minimal_arm;
-#ifdef ARM_BOARD
+
     // 发送给机械臂
     PubPushMessage(arm_cmd_pub, &arm_cmd_send);
     UARTCommSend(cmd_uart_comm, (void *)&chassis_cmd_send);
-#endif
-#ifdef CHASSIS_BOARD
-    // 发送给底盘
-    PubPushMessage(chassis_cmd_pub, &chassis_cmd_send);
-#endif
 }
 
 /**
@@ -124,15 +111,44 @@ void RobotCMDTask(void)
  */
 static void RemoteControlSet(void)
 {
-#ifdef CHASSIS_BOARD
+    arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
+
+    arm_cmd_send.maximal_arm += (rc_data[TEMP].key[KEY_PRESS].q - rc_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
+    arm_cmd_send.minimal_arm += (rc_data[TEMP].key[KEY_PRESS].a - rc_data[TEMP].key[KEY_PRESS].d) * 0.003f;
+    arm_cmd_send.finesse += (rc_data[TEMP].key[KEY_PRESS].z - rc_data[TEMP].key[KEY_PRESS].c) * 0.003f;
+    arm_cmd_send.pitch_arm += (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 0.003f;
+    arm_cmd_send.arm_status = ARM_NORMAL;
+
+    if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r) {
+        arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
+    } else {
+        arm_cmd_send.lift_mode = LIFT_KEEP;
+    }
+    arm_cmd_send.lift = (3 * (rc_data[TEMP].mouse.press_l) - 6 * (rc_data[TEMP].mouse.press_r)) * 10 + arm_fetch_data.height;
+
+    if (rc_data[TEMP].key[KEY_PRESS].f || rc_data[TEMP].key[KEY_PRESS].g) {
+        arm_cmd_send.roll_mode = ROLL_ANGLE_MODE;
+    } else {
+        arm_cmd_send.roll_mode = ROLL_KEEP;
+    }
+    arm_cmd_send.roll = ((10.f * rc_data[TEMP].key[KEY_PRESS].f) - (10.f * rc_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
+
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
+
     chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
     chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
     chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
     chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
-#endif
+    // #ifdef CHASSIS_BOARD
+    //     chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
+    //     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
+    //     chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
+    //     chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
+    //     chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
+    // #endif
 }
-#ifdef ARM_BOARD
+
 /**
  * @brief 保持机械臂当前位置不变
  *
@@ -450,18 +466,15 @@ __attribute__((used)) static void VideoHeigtInit(void)
 
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
-#endif
 
 /**
  * @brief 图传链路以及自定义控制器的模式和控制量设置
  *
  */
 #define ARM_MODE_COUNT 6
-static int mode = 0;
+static int mode;
 static void VideoControlSet(void)
 {
-    // 直接测试，稍后会添加到函数中
-#ifdef ARM_BOARD
     // 机械臂控制
     switch (video_data[TEMP].key_count[KEY_PRESS][Key_B] % 2) {
         case 0:
@@ -521,8 +534,6 @@ static void VideoControlSet(void)
             break;
     }
 
-#endif
-
     switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 3) {
         case 0:
             chassis_cmd_send.chassis_mode       = CHASSIS_FAST;
@@ -558,12 +569,7 @@ static void VideoControlSet(void)
  */
 static void EmergencyHandler(void)
 {
-// 底盘急停
-#ifdef CHASSIS_BOARD
+    // 底盘急停
+    arm_cmd_send.arm_mode         = ARM_ZERO_FORCE;
     chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
-#endif
-    // 机械臂急停
-#ifdef ARM_BOARD
-    arm_cmd_send.arm_mode = ARM_ZERO_FORCE;
-#endif
 }
