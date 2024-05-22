@@ -17,8 +17,8 @@
 
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // ! 单板控制整车，beta选项，建议别选上
-#define CHASSIS_BOARD // 底盘板
-// #define ARM_BOARD // 工程手臂板
+// #define CHASSIS_BOARD // 底盘板
+#define ARM_BOARD // 工程手臂板
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 底盘参数
@@ -94,6 +94,12 @@ typedef enum {
     CHASSIS_MEDIUM,         // 底盘转速中等
     CHASSIS_SLOW,           // 底盘转速慢
 } chassis_mode_e;
+
+typedef enum {
+    TRANS_STOP = 0, // 停止传送带
+    TRANS_DIRECT,   // 正转
+    TRANS_REVERSE,  // 反转
+} trans_mode_e;
 
 typedef enum {
     GIMBAL_ZERO_FORCE = 0, // 电流零输入
@@ -215,6 +221,7 @@ typedef struct
     float wz;           // 旋转速度
     float offset_angle; // 底盘和归中位置的夹角
     chassis_mode_e chassis_mode;
+    trans_mode_e trans_mode;
     float chassis_speed_buff;
     // UI部分
     ui_mode_e ui_mode;         //  UI状态

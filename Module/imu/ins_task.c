@@ -166,9 +166,9 @@ void INS_Task(void)
         INS.Pitch = QEKF_INS.Pitch;
         INS.Roll = QEKF_INS.Roll;
         INS.YawTotalAngle = QEKF_INS.YawTotalAngle;
-#if (defined(ONE_BOARD) || defined(GIMBAL_BOARD))
-        VisionSetAltitude(INS.Yaw, INS.Pitch, INS.Roll);
-#endif
+// #if (defined(ONE_BOARD) || defined(GIMBAL_BOARD))
+//         VisionSetAltitude(INS.Yaw, INS.Pitch, INS.Roll);
+// #endif
     }
 
     // temperature control

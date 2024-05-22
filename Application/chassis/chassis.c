@@ -23,7 +23,7 @@ __unused static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的�
 static referee_info_t *referee_data;                         // 用于获取裁判系统的数据
 static Referee_Interactive_info_t ui_data;                   // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
 
-static DJIMotor_Instance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
+static DJIMotor_Instance *motor_lf, *motor_rf, *motor_lb, *motor_rb, *trans; // left right forward back
 
 /* 私有函数计算的中介变量,设为静态避免参数传递的开销 */
 static float chassis_vx, chassis_vy;     // 将云台系的速度投影到底盘
@@ -77,6 +77,40 @@ void ChassisInit()
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_REVERSE;
     motor_rb                                                               = DJIMotorInit(&chassis_motor_config);
 
+    // 初始化变换模块
+    Motor_Init_Config_s trans_motor_config = {
+        .can_init_config = {
+            .can_handle = &hcan1,
+            .tx_id      = 1,
+        },
+        .controller_param_init_config = {
+            .speed_PID = {
+                .Kp            = 5, // 10
+                .Ki            = 0, // 1
+                .Kd            = 0,
+                .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
+                .IntegralLimit = 10000,
+                .MaxOut        = 15000,
+            },
+            .current_PID = {
+                .Kp            = 0.7, // 0.7
+                .Ki            = 0,   // 0.1
+                .Kd            = 0,
+                .Improve       = PID_Integral_Limit,
+                .IntegralLimit = 10000,
+                .MaxOut        = 15000,
+            },
+        },
+        .controller_setting_init_config = {
+            .angle_feedback_source = MOTOR_FEED, .speed_feedback_source = MOTOR_FEED,
+            .outer_loop_type    = SPEED_LOOP, // 初始化成SPEED_LOOP,
+            .close_loop_type    = CURRENT_LOOP | SPEED_LOOP,
+            .motor_reverse_flag = MOTOR_DIRECTION_NORMAL, // 注意方向
+        },
+        .motor_type = M2006};
+
+    trans = DJIMotorInit(&trans_motor_config);
+
     referee_data = UITaskInit(&huart6, &ui_data); // 裁判系统初始化,会同时初始化UI
 #ifdef CHASSIS_BOARD
     UARTComm_Init_Config_s chassis_usart_config = {
@@ -122,6 +156,7 @@ static void LimitChassisOutput()
 }
 
 /* 机器人底盘控制核心任务 */
+static trans_mode_e trans_mode_last;
 void ChassisTask()
 {
 #ifdef ONE_BOARD
@@ -140,6 +175,7 @@ void ChassisTask()
         DJIMotorEnable(motor_rf);
         DJIMotorEnable(motor_lb);
         DJIMotorEnable(motor_rb);
+        DJIMotorEnable(trans);
     }
     // 根据云台和底盘的角度offset将控制量映射到底盘坐标系上
     // 底盘逆时针旋转为角度正方向;云台命令的方向以云台指向的方向为x,采用右手系(x指向正北时y在正东)
@@ -154,6 +190,20 @@ void ChassisTask()
 
     // 根据裁判系统的反馈数据和电容数据对输出限幅并设定闭环参考值
     LimitChassisOutput();
+
+    switch (chassis_cmd_recv.trans_mode) {
+        case TRANS_STOP:
+            DJIMotorSetRef(trans, 0);
+            break;
+        case TRANS_DIRECT:
+            DJIMotorSetRef(trans, -10000);
+            break;
+        case TRANS_REVERSE:
+            DJIMotorSetRef(trans, 10000);
+            break;
+        default:
+            break;
+    }
 
     ui_data.ui_mode      = chassis_cmd_recv.ui_mode;
     ui_data.chassis_mode = chassis_cmd_recv.chassis_mode;

@@ -190,10 +190,10 @@ static void Recycle(void)
  */
 static void GetRockFromCar(void)
 {
-    arm_cmd_send.maximal_arm = 0.2824f;
-    arm_cmd_send.minimal_arm = 2.40f;
-    arm_cmd_send.finesse     = -0.0001f;
-    arm_cmd_send.pitch_arm   = -1.04f;
+    arm_cmd_send.maximal_arm = 0.5521f;
+    arm_cmd_send.minimal_arm = 1.9975f;
+    arm_cmd_send.finesse     = 1.0984f;
+    arm_cmd_send.pitch_arm   = -0.4602f;
     arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
     arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
     arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
@@ -553,10 +553,20 @@ static void VideoControlSet(void)
         chassis_cmd_send.ui_mode = UI_KEEP;
     }
 
+    if (video_data[TEMP].key[KEY_PRESS].g) {
+        chassis_cmd_send.trans_mode = TRANS_STOP;
+    }
+    if (video_data[TEMP].key[KEY_PRESS_WITH_SHIFT].g) {
+        chassis_cmd_send.trans_mode = TRANS_DIRECT;
+    }
+    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].g) {
+        chassis_cmd_send.trans_mode = TRANS_REVERSE;
+    }
+
     chassis_cmd_send.vx = (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
     chassis_cmd_send.vy = (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测                                                                                                         // test
     chassis_cmd_send.wz = (float)video_data[TEMP].key_data.mouse_x * 10 +
-                          (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 26000 * chassis_cmd_send.chassis_speed_buff;
+                          (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 8000 * chassis_cmd_send.chassis_speed_buff;
     chassis_cmd_send.chassis_speed_buff = 1; // test
 }
 

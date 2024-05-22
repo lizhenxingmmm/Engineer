@@ -73,7 +73,7 @@ void UARTCommSend(UARTComm_Instance *ins, uint8_t *send_data)
     crc8                                     = crc_8(send_data, ins->send_data_len);
     ins->raw_sendbuf[2 + ins->send_data_len] = crc8;
     // 发送
-    USARTSend(ucomm->uart_instance, ins->raw_sendbuf, ins->send_buf_len, USART_TRANSFER_BLOCKING);
+    USARTSend(ucomm->uart_instance, ins->raw_sendbuf, ins->send_buf_len, USART_TRANSFER_IT);
 }
 
 void *UARTCommGet(UARTComm_Instance *instance)
