@@ -156,7 +156,6 @@ static void LimitChassisOutput()
 }
 
 /* 机器人底盘控制核心任务 */
-static trans_mode_e trans_mode_last;
 void ChassisTask()
 {
 #ifdef ONE_BOARD
