@@ -263,8 +263,8 @@ void GC_get_target_angles_slightly(slightly_controll_data data_pack, float resul
         handcoor = 1;
     } // 机械臂呈右手形状
     scara_inverse_kinematics(xy[0], xy[1], ARMLENGHT1, ARMLENGHT2, handcoor, res_angle);
-    result[0] = res_angle[0] - 0.96f;
-    result[1] = res_angle[1] + 0.43f;
+    result[0] = res_angle[0];
+    result[1] = res_angle[1];
     result[2] = init_state.init_yaw + data_pack.delta_yaw;
     result[3] = init_state.init_pitch + data_pack.delta_pitch;
     result[4] = init_state.init_roll + data_pack.delta_roll;
@@ -273,8 +273,8 @@ void GC_get_target_angles_slightly(slightly_controll_data data_pack, float resul
 
 void StateInit(float angle1, float angle2, float angle3, float angle4, float z, float roll_angle)
 {
-    init_state.init_angle1 = angle1 + 0.96f;
-    init_state.init_angle2 = angle2 - 0.43f;
+    init_state.init_angle1 = angle1;
+    init_state.init_angle2 = angle2;
     init_state.init_yaw    = angle3;
     init_state.init_pitch  = angle4;
     init_state.init_Z      = z;

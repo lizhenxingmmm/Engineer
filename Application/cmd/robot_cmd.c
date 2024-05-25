@@ -431,11 +431,9 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.maximal_arm = angle_ref[0];
     arm_cmd_send.minimal_arm = angle_ref[1];
     arm_cmd_send.finesse     = remenber_finesse_angle - arm_fetch_data.maximal_arm - arm_fetch_data.minimal_arm;
-    // arm_cmd_send.pitch_arm   = angle_ref[3];
+    //不要pitch和和yaw的控制量了
     arm_cmd_send.roll = angle_ref[4];
-    arm_cmd_send.lift = angle_ref[5];
-    // arm_cmd_send.lift += video_data[TEMP].cus.height;
-    //  arm_cmd_send.roll += video_data[TEMP].cus.roll_arm_target;
+    arm_cmd_send.lift = video_data[TEMP].scd.delta_z+ arm_fetch_data.height;//微调模式与全控制模式相同
     arm_cmd_send.lift_mode     = LIFT_ANGLE_MODE;
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
