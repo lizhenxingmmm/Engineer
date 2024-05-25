@@ -190,9 +190,9 @@ static void Recycle(void)
  */
 static void GetRockFromCar(void)
 {
-    arm_cmd_send.maximal_arm = 1.2914f;
-    arm_cmd_send.minimal_arm = 1.9766f;
-    arm_cmd_send.finesse     = 0.0570f;
+    arm_cmd_send.maximal_arm = 1.2956f;
+    arm_cmd_send.minimal_arm = 2.1921f;
+    arm_cmd_send.finesse     = -0.1894f;
     arm_cmd_send.pitch_arm   = -1.6172f;
     arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
     arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
