@@ -34,19 +34,19 @@
 #define MAXARM_LENGTH 220 // 机械臂最大长度 mm
 #define MINARM_LENGTH 220 // 机械臂最小长度 mm
 
-#define MAXARM_ZERO   -0.95f
-#define MINARM_ZERO   0.39f
-#define FINE_ZERO     0.03f
-#define PITCH_ZERO    0.54f
+#define MAXARM_ZERO   0.0f
+#define MINARM_ZERO   0.0f
+#define FINE_ZERO     0.0f
+#define PITCH_ZERO    0.0f
 
-#define MAXARM_MIN    -1.0f
-#define MAXARM_MAX    0.74f
-#define MINARM_MIN    -1.9f
-#define MINARM_MAX    2.7f
-#define FINE_MIN      -1.6f
-#define FINE_MAX      2.2f
-#define PITCH_MIN     -0.46f
-#define PITCH_MAX     2.49f
+#define MAXARM_MIN    -0.24f
+#define MAXARM_MAX    1.74f
+#define MINARM_MIN    -2.45f
+#define MINARM_MAX    2.4f
+#define FINE_MIN      -1.16f
+#define FINE_MAX      1.72f
+#define PITCH_MIN     -1.61f
+#define PITCH_MAX     1.50f
 #define HEIGHT_MIN    -550.f
 #define HEIGHT_MAX    560.f // 50
 #define ROLL_MIN      -180.f

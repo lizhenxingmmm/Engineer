@@ -259,7 +259,7 @@ void ARMTask(void)
     }
 
     if ((arm_cmd_recv.arm_mode == ARM_HUM_CONTORL &&
-         minimal_arm->measure.position >= 0.3f) ||
+         minimal_arm->measure.position >= MINARM_ZERO) ||
         arm_cmd_recv.arm_mode == ARM_AUTO_CONTORL) {
         DMMotorRampEnable(maximal_arm);
         DMMotorRampEnable(minimal_arm);
