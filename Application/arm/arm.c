@@ -269,7 +269,11 @@ void ARMTask(void)
     }
     VAL_LIMIT(arm_cmd_recv.maximal_arm, MAXARM_MIN, MAXARM_MAX);
     VAL_LIMIT(arm_cmd_recv.minimal_arm, MINARM_MIN, MINARM_MAX);
-    VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN, FINE_MAX);
+    if (arm_cmd_recv.pitch_arm > -0.1f) {
+        VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN2, FINE_MAX2);
+    } else {
+        VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN, FINE_MAX);
+    }
     VAL_LIMIT(arm_cmd_recv.pitch_arm, PITCH_MIN, PITCH_MAX);
     VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
     DMMotorSetRef(maximal_arm, arm_cmd_recv.maximal_arm); // MIN -1.0,MAX 0.75

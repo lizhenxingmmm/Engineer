@@ -43,8 +43,10 @@
 #define MAXARM_MAX    1.74f
 #define MINARM_MIN    -2.45f
 #define MINARM_MAX    2.4f
-#define FINE_MIN      -1.16f
+#define FINE_MIN      -1.16f  // -1.16
 #define FINE_MAX      1.72f
+#define FINE_MIN2      -2.16f
+#define FINE_MAX2      1.96f
 #define PITCH_MIN     -1.61f
 #define PITCH_MAX     1.50f
 #define HEIGHT_MIN    -550.f

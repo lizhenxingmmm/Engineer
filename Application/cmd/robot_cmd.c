@@ -75,23 +75,20 @@ void RobotCMDInit(void)
 /* 机器人核心控制任务,200Hz频率运行(必须高于视觉发送频率) */
 void RobotCMDTask(void)
 {
-    // 获取各个模块的数据
-    // #ifdef CHASSIS_BOARD
-    //     // 获取底盘反馈信息
-    //     SubGetMessage(chassis_feed_sub, &chassis_fetch_data);
-    // #endif
-
     // 获取机械臂反馈信息
     SubGetMessage(arm_feed_sub, &arm_fetch_data);
     chassis_fetch_data = *(Chassis_Upload_Data_s *)UARTCommGet(cmd_uart_comm);
 
     if (!rc_data[TEMP].rc.switch_right ||
         switch_is_down(rc_data[TEMP].rc.switch_right)) // 当收不到遥控器信号时，使用图传链路
+    {
         VideoControlSet();
-    else if (switch_is_mid(rc_data[TEMP].rc.switch_right)) // 当收到遥控器信号时,且右拨杆为中，使用遥控器
-    {                                                      // RemoteControlSet();
-    } else if (switch_is_up(rc_data[TEMP].rc.switch_right))
+    } else if (switch_is_mid(rc_data[TEMP].rc.switch_right)) // 当收到遥控器信号时,且右拨杆为中，使用遥控器
+    {
+        RemoteControlSet();
+    } else if (switch_is_up(rc_data[TEMP].rc.switch_right)) {
         EmergencyHandler();
+    }
 
     // 发送控制信息
     chassis_cmd_send.arm_mode    = arm_cmd_send.arm_mode;
@@ -140,13 +137,6 @@ static void RemoteControlSet(void)
     chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
     chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
     chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
-    // #ifdef CHASSIS_BOARD
-    //     chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
-    //     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
-    //     chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
-    //     chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
-    //     chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
-    // #endif
 }
 
 /**
@@ -431,9 +421,9 @@ static void VideoSlightlyContorl(void)
     arm_cmd_send.maximal_arm = angle_ref[0];
     arm_cmd_send.minimal_arm = angle_ref[1];
     arm_cmd_send.finesse     = remenber_finesse_angle - arm_fetch_data.maximal_arm - arm_fetch_data.minimal_arm;
-    //不要pitch和和yaw的控制量了
-    arm_cmd_send.roll = angle_ref[4];
-    arm_cmd_send.lift = video_data[TEMP].scd.delta_z+ arm_fetch_data.height;//微调模式与全控制模式相同
+    // 不要pitch和和yaw的控制量了
+    arm_cmd_send.roll          = angle_ref[4];
+    arm_cmd_send.lift          = video_data[TEMP].scd.delta_z + arm_fetch_data.height; // 微调模式与全控制模式相同
     arm_cmd_send.lift_mode     = LIFT_ANGLE_MODE;
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
@@ -517,7 +507,11 @@ static void VideoControlSet(void)
 
     VAL_LIMIT(arm_cmd_send.maximal_arm, MAXARM_MIN, MAXARM_MAX);
     VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
-    VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
+    if (arm_cmd_send.pitch_arm > -0.3f) {
+        VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN2, FINE_MAX2);
+    } else {
+        VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
+    }
     VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
     if (arm_cmd_send.lift_mode == LIFT_ANGLE_MODE)
         VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
