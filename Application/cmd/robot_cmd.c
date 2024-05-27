@@ -101,7 +101,7 @@ void RobotCMDTask(void)
     PubPushMessage(arm_cmd_pub, &arm_cmd_send);
     UARTCommSend(cmd_uart_comm, (void *)&chassis_cmd_send);
 }
-
+static void SuckerContorl2(void);
 /**
  * @brief 控制输入为遥控器(调试时)的模式和控制量设置
  *
@@ -131,6 +131,8 @@ static void RemoteControlSet(void)
     arm_cmd_send.roll = ((10.f * rc_data[TEMP].key[KEY_PRESS].f) - (10.f * rc_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
 
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
+
+    SuckerContorl2();
 
     chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
@@ -226,6 +228,18 @@ static void DebugModeControl(void)
 static void SuckerContorl(void)
 {
     switch (video_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
+        case 1:
+            arm_cmd_send.sucker_mode = SUCKER_ON;
+            break;
+        default:
+            arm_cmd_send.sucker_mode = SUCKER_OFF;
+            break;
+    }
+}
+
+static void SuckerContorl2(void)
+{
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
         case 1:
             arm_cmd_send.sucker_mode = SUCKER_ON;
             break;
@@ -507,7 +521,7 @@ static void VideoControlSet(void)
 
     VAL_LIMIT(arm_cmd_send.maximal_arm, MAXARM_MIN, MAXARM_MAX);
     VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
-    if (arm_cmd_send.pitch_arm > -0.3f) {
+    if (arm_cmd_send.pitch_arm > -0.1f) {
         VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN2, FINE_MAX2);
     } else {
         VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
