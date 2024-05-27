@@ -31,11 +31,9 @@
 // static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
 // #endif
 
-static float rc_mode_xy[2]={0,0};//x,y坐标
-static float rc_mode_xy_after_check[2]={0,0};
-static float rc_mode_yaw;
-static float rc_mode_pitch;
-static float rc_mode_roll;
+static float rc_mode_xy[2]             = {0, 0}; // x,y坐标
+static float rc_mode_xy_after_check[2] = {0, 0};
+static uint8_t suck_flag;
 
 static Publisher_t *arm_cmd_pub;         // 底盘控制消息发布者
 static Subscriber_t *arm_feed_sub;       // 底盘反馈信息订阅者
@@ -89,11 +87,9 @@ void RobotCMDTask(void)
         switch_is_down(rc_data[TEMP].rc.switch_right)) // 当收不到遥控器信号时，使用图传链路
     {
         VideoControlSet();
-    } else if (switch_is_mid(rc_data[TEMP].rc.switch_right)) // 当收到遥控器信号时,且右拨杆为中，使用遥控器
+    } else if (switch_is_mid(rc_data[TEMP].rc.switch_right) || switch_is_up(rc_data[TEMP].rc.switch_right)) // 当收到遥控器信号时,且右拨杆为中，使用遥控器
     {
         RemoteControlSet();
-    } else if (switch_is_up(rc_data[TEMP].rc.switch_right)) {
-        EmergencyHandler();
     }
 
     // 发送控制信息
@@ -114,7 +110,9 @@ static void SuckerContorl2(void);
  */
 static void RemoteControlSet(void)
 {
-    float res_scara_angle[2];//第一个为大臂，第二个为小臂
+    float res_scara_angle[2]; //第一个为大臂，第二个为小臂
+    uint8_t switch_left_down_flag;
+    uint8_t switch_left_up_flag;
     arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
 
     // arm_cmd_send.maximal_arm += (rc_data[TEMP].key[KEY_PRESS].q - rc_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
@@ -122,41 +120,65 @@ static void RemoteControlSet(void)
     // arm_cmd_send.finesse += (rc_data[TEMP].key[KEY_PRESS].z - rc_data[TEMP].key[KEY_PRESS].c) * 0.003f;
     // arm_cmd_send.pitch_arm += (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 0.003f;
     // arm_cmd_send.arm_status = ARM_NORMAL;
+    if (switch_is_down(rc_data[TEMP].rc.switch_left)) {
+        switch_left_down_flag = 1;
+        switch_left_up_flag   = 0;
+    } else if (switch_is_up(rc_data[TEMP].rc.switch_left)) {
+        switch_left_down_flag = 0;
+        switch_left_up_flag   = 1;
+    } else {
+        switch_left_down_flag = 0;
+        switch_left_up_flag   = 0;
+    }
+    rc_mode_xy[0] += (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s);
+    rc_mode_xy[1] += (rc_data[TEMP].key[KEY_PRESS].a - rc_data[TEMP].key[KEY_PRESS].d);
+    if (rc_data[TEMP].rc.rocker_r1 > 100) {
+        rc_mode_xy[0] += (rc_data[TEMP].rc.rocker_r1) / 240;
+    }
+    if (rc_data[TEMP].rc.rocker_r1 < -100) {
+        rc_mode_xy[0] += (rc_data[TEMP].rc.rocker_r1) / 240;
+    }
+    if (rc_data[TEMP].rc.rocker_r_ > 100) {
+        rc_mode_xy[1] -= (rc_data[TEMP].rc.rocker_r_) / 240;
+    }
+    if (rc_data[TEMP].rc.rocker_r_ < -100) {
+        rc_mode_xy[1] -= (rc_data[TEMP].rc.rocker_r_) / 240;
+    }
+    // x限位
+    if (rc_mode_xy[0] > ARMLENGHT1 + ARMLENGHT2) {
+        rc_mode_xy[0] = ARMLENGHT1 + ARMLENGHT2;
+    }
+    if (rc_mode_xy[0] < 0) {
+        rc_mode_xy[0] = 0;
+    }
+    // y限位
+    if (rc_mode_xy[1] > 400) {
+        rc_mode_xy[1] = 400;
+    }
+    if (rc_mode_xy[1] < -228) {
+        rc_mode_xy[1] = -228;
+    }
+    check_boundary_scara_lefthand(rc_mode_xy[0], rc_mode_xy[1], rc_mode_xy_after_check);
+    scara_inverse_kinematics(rc_mode_xy_after_check[0], rc_mode_xy_after_check[1], ARMLENGHT1, ARMLENGHT2, 2, res_scara_angle);
 
-    rc_mode_xy[0]+=(rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s);
-    rc_mode_xy[1]+=(rc_data[TEMP].key[KEY_PRESS].a - rc_data[TEMP].key[KEY_PRESS].d);
-    //x限位
-    if(rc_mode_xy[0]>ARMLENGHT1+ARMLENGHT2)
-    {
-        rc_mode_xy[0]=ARMLENGHT1+ARMLENGHT2;
-    }
-    if(rc_mode_xy[0]<0)
-    {
-        rc_mode_xy[0]=0;
-    }
-    //y限位
-    if(rc_mode_xy[1]>ARMLENGHT1+ARMLENGHT2)
-    {
-        rc_mode_xy[1]=ARMLENGHT1+ARMLENGHT2;
-    }
-    if(rc_mode_xy[1]<-300)
-    {
-        rc_mode_xy[1]=-300;
-    }
-    check_boundary_scara(rc_mode_xy[0],rc_mode_xy[1],rc_mode_xy_after_check);
-    scara_inverse_kinematics(rc_mode_xy[0],rc_mode_xy[1],ARMLENGHT1,ARMLENGHT2,2,res_scara_angle);
-    arm_cmd_send.maximal_arm=res_scara_angle[0];
-    arm_cmd_send.minimal_arm=res_scara_angle[1];
+    arm_cmd_send.maximal_arm = res_scara_angle[0];
+    arm_cmd_send.minimal_arm = res_scara_angle[1];
+    arm_cmd_send.finesse     = -res_scara_angle[0] - res_scara_angle[1];
     arm_cmd_send.finesse += (rc_data[TEMP].key[KEY_PRESS].z - rc_data[TEMP].key[KEY_PRESS].c) * 0.003f;
     arm_cmd_send.pitch_arm += (rc_data[TEMP].key[KEY_PRESS].f - rc_data[TEMP].key[KEY_PRESS].v) * 0.003f;
-    if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r) {
+    if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r || switch_left_down_flag || switch_left_up_flag) {
         arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
     } else {
         arm_cmd_send.lift_mode = LIFT_KEEP;
     }
     arm_cmd_send.lift = (3 * (rc_data[TEMP].mouse.press_l) - 6 * (rc_data[TEMP].mouse.press_r)) * 10 + arm_fetch_data.height;
-
-    if (rc_data[TEMP].key[KEY_PRESS].f || rc_data[TEMP].key[KEY_PRESS].g) {
+    if (switch_left_down_flag) {
+        arm_cmd_send.lift = 15000 + arm_fetch_data.height;
+    }
+    if (switch_left_up_flag) {
+        arm_cmd_send.lift = -15000 + arm_fetch_data.height;
+    }
+    if (rc_data[TEMP].key[KEY_PRESS].b || rc_data[TEMP].key[KEY_PRESS].g) {
         arm_cmd_send.roll_mode = ROLL_ANGLE_MODE;
     } else {
         arm_cmd_send.roll_mode = ROLL_KEEP;
@@ -165,8 +187,12 @@ static void RemoteControlSet(void)
 
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 
-    SuckerContorl2();
-
+    // SuckerContorl2();
+    if (switch_is_up(rc_data[TEMP].rc.switch_right)) {
+        arm_cmd_send.sucker_mode = SUCKER_ON;
+    } else {
+        arm_cmd_send.sucker_mode = SUCKER_OFF;
+    }
     chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
     chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向

@@ -36,5 +36,6 @@ void StateInit(float angle1, float angle2, float angle3, float angle4, float z, 
 void RecordMode(uint8_t HeadByte);
 void GetCurrentState(float angle1, float angle2, float angle3, float angle4, float z, float roll_angle);
 void PushToCube(float result[6], float length);
+void check_boundary_scara_lefthand(float x, float y, float res_xy[2]);
 
 #endif

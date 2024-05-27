@@ -1,7 +1,7 @@
 #include "scara_kinematics.h"
 
 // matlab拟合scara作用域边缘曲线 4组多项式系数
-// 右手系
+//右手系
 static double p1[11]    = {-1.10065178273691e-22, 1.06645332267733e-19, -1.98070247542431e-17, -9.01209362520754e-15, 2.96610079693952e-12, 1.75520102235951e-10, -1.21357691731590e-07, 3.85247448810884e-06, 9.82819302033759e-05, -0.0491176786968019, 437.137342610030};
 static double p2[8]     = {3.84663645304406e-10, 5.70553992838450e-07, 0.000361679303699002, 0.127026860974384, 26.6969694166810, 3357.73670397313, 234016.557026143, 6972319.01824987};
 static double p3[8]     = {4.23575783078938e-14, 1.11891283783721e-11, 5.48266493973248e-10, -1.07478937940491e-07, -7.78557552183604e-06, -0.00266221190038819, 0.0115628796358165, 185.765483072071};
@@ -18,16 +18,16 @@ y_axis
 */
 
 // matlab拟合scara作用域边缘曲线 4组多项式系数
-// 左手系 边界曲线是x=f(y)
-float core_xy_left[2]; // 第一个为x，第二个为y
+//左手系 边界曲线是x=f(y)
+float core_xy_left[2]; //第一个为x，第二个为y
 static double p1_left[12]    = {-9.19783820154168e-26, -8.43412855479107e-23, 1.68308078383591e-19, -5.53784999153763e-17, -7.32176988987681e-15, 5.22038285883451e-12, -1.33739379602848e-10, -1.58438016933300e-07, 1.10139207872326e-05, -0.000134235298985242, -0.0447874371527445, 437.074377011056};
 static double p2_left[8]     = {-5.83471804600852e-14, 1.04234403581324e-10, -7.72639220455988e-08, 3.06768322353393e-05, -0.00701654097258198, 0.918449748231459, -62.9447674491854, 1889.65231899421};
 static double p3_left[8]     = {2.63110665475006e-14, 2.90568291485181e-12, -5.33933793010990e-10, -7.87966873042083e-08, 3.43665441748701e-06, -0.00241616306396199, -0.00446805569412984, 184.852565240003};
 static double p4_left[6]     = {-2.42025565077405e-06, -0.00235099169942876, -0.911645157853126, -176.380787311356, -17026.5122739973, -656014.080150478};
-static float y_limit_left[2] = {-228.0f, 440.0f};
+static float y_limit_left[2] = {-228.0f, 400.0f};
 
 static initial_state init_state;
-static initial_state current_state; // 在push函数中使用
+static initial_state current_state; //在push函数中使用
 
 /**
  * @brief two dimensional scara
@@ -51,7 +51,7 @@ void scara_inverse_kinematics(float x, float y, float L1, float L2, uint8_t hand
             return;
         }
     }
-    // 避免解出奇怪值
+    //避免解出奇怪值
     if (cos_beta > 1 || cos_beta < -1) { return; }
     if (handcoor == 1) {
         sin_beta = sqrt(temp);
@@ -121,16 +121,16 @@ static void ProjectOnCurve(float x, float y, float res_xy[2], double polyval)
  */
 void check_boundary_scara_lefthand(float x, float y, float res_xy[2])
 {
-    // 限位
+    //限位
     if (y < y_limit_left[0]) {
         y = y_limit_left[0];
     }
     if (y > y_limit_left[1]) {
         y = y_limit_left[1];
     }
-    // 算基本值
-    double temp_angle = atan2(y, x);
-    double polyval_p1 = polyval_calc(p1_left, y, 12);
+    //算基本值
+
+    double polyval_p1 = polyval_calc(p1_left, y, 12) - 20;
     double polyval_p2 = polyval_calc(p2_left, y, 8);
     double polyval_p3 = polyval_calc(p3_left, y, 8);
     double polyval_p4 = polyval_calc(p4_left, y, 6);
@@ -154,29 +154,29 @@ void check_boundary_scara_lefthand(float x, float y, float res_xy[2])
  */
 void check_boundary_scara(float x, float y, float res_xy[2])
 {
-    // 限位
-    if (x < x_limit[0]) {
-        x = x_limit[0];
-    }
-    if (x > x_limit[1]) {
-        x = x_limit[1];
-    }
-    // 算基本值
-    double temp_angle = atan2(y, x);
-    double polyval_p1 = polyval_calc(p1, x, 11);
-    double polyval_p2 = polyval_calc(p2, x, 8);
-    double polyval_p3 = polyval_calc(p3, x, 8);
-    double polyval_p4 = polyval_calc(p4, x, 11);
+    // //限位
+    // if (x < x_limit[0]) {
+    //     x = x_limit[0];
+    // }
+    // if (x > x_limit[1]) {
+    //     x = x_limit[1];
+    // }
+    // //算基本值
 
-    if (y > polyval_p1) {
-        y = polyval_p1;
-    } else {
-        if (x > -250 && x < -177 && y < polyval_p2) { y = polyval_p2; }
-        if (x >= -177 && x < 85 && y < polyval_p3) { y = polyval_p3; }
-        if (x >= 85 && x <= 440 && y < polyval_p4) { y = polyval_p4; }
-    }
-    res_xy[0] = x;
-    res_xy[1] = y;
+    // double polyval_p1 = polyval_calc(p1, x, 11);
+    // double polyval_p2 = polyval_calc(p2, x, 8);
+    // double polyval_p3 = polyval_calc(p3, x, 8);
+    // double polyval_p4 = polyval_calc(p4, x, 11);
+
+    // if (y > polyval_p1) {
+    //     y = polyval_p1;
+    // } else {
+    //     if (x > -250 && x < -177 && y < polyval_p2) { y = polyval_p2; }
+    //     if (x >= -177 && x < 85 && y < polyval_p3) { y = polyval_p3; }
+    //     if (x >= 85 && x <= 440 && y < polyval_p4) { y = polyval_p4; }
+    // }
+    // res_xy[0] = x;
+    // res_xy[1] = y;
 }
 
 /**
@@ -204,10 +204,10 @@ void scara_forward_kinematics(float angle1, float angle2, float L1, float L2, fl
  */
 void GetCurrentState(float angle1, float angle2, float angle3, float angle4, float z, float roll_angle)
 {
-    current_state.init_angle1 = angle1 + 0.96f;
-    current_state.init_angle2 = angle2 - 0.43f;
-    current_state.init_yaw    = angle3 - 0.03;
-    current_state.init_pitch  = angle4 - 0.66;
+    current_state.init_angle1 = angle1 + 0.f;
+    current_state.init_angle2 = angle2 - 0.f;
+    current_state.init_yaw    = angle3 - 0.;
+    current_state.init_pitch  = angle4 - 0.;
     current_state.init_Z      = z;
     current_state.init_roll   = roll_angle;
 }
@@ -229,17 +229,17 @@ void PushToCube(float result[6], float length)
     scara_forward_kinematics(current_state.init_angle1, current_state.init_angle2, ARMLENGHT1, ARMLENGHT2, xy);
     xy[0] += OperatorVector[0];
     xy[1] += OperatorVector[1];
-    if (current_state.init_angle2 < 0) { handcoor = 2; } // 机械臂呈左手形状
+    if (current_state.init_angle2 < 0) { handcoor = 2; } //机械臂呈左手形状
     else {
         handcoor = 1;
-    } // 机械臂呈右手形状
+    } //机械臂呈右手形状
     scara_inverse_kinematics(xy[0], xy[1], ARMLENGHT1, ARMLENGHT2, handcoor, res_angle);
-    result[0] = res_angle[0] - 0.96f;
-    result[1] = res_angle[1] + 0.43f;
+    result[0] = res_angle[0] - 0.f;
+    result[1] = res_angle[1] + 0.f;
     result[2] = current_state.init_yaw - (res_angle[0] - current_state.init_angle1 + res_angle[1] - current_state.init_angle2);
     result[3] = current_state.init_pitch;
     result[4] = current_state.init_roll;
-    result[5] = current_state.init_Z + OperatorVector[2];
+    result[6] = current_state.init_Z + OperatorVector[2];
 }
 
 /**
@@ -258,13 +258,13 @@ void GC_get_target_angles_slightly(slightly_controll_data data_pack, float resul
     scara_forward_kinematics(init_state.init_angle1, init_state.init_angle2, ARMLENGHT1, ARMLENGHT2, xy);
     xy[0] += data_pack.delta_x;
     xy[1] += data_pack.delta_y;
-    if (init_state.init_angle2 < 0) { handcoor = 2; } // 机械臂呈左手形状
+    if (init_state.init_angle2 < 0) { handcoor = 2; } //机械臂呈左手形状
     else {
         handcoor = 1;
-    } // 机械臂呈右手形状
+    } //机械臂呈右手形状
     scara_inverse_kinematics(xy[0], xy[1], ARMLENGHT1, ARMLENGHT2, handcoor, res_angle);
-    result[0] = res_angle[0];
-    result[1] = res_angle[1];
+    result[0] = res_angle[0] - 0.f;
+    result[1] = res_angle[1] + 0.f;
     result[2] = init_state.init_yaw + data_pack.delta_yaw;
     result[3] = init_state.init_pitch + data_pack.delta_pitch;
     result[4] = init_state.init_roll + data_pack.delta_roll;
@@ -273,8 +273,8 @@ void GC_get_target_angles_slightly(slightly_controll_data data_pack, float resul
 
 void StateInit(float angle1, float angle2, float angle3, float angle4, float z, float roll_angle)
 {
-    init_state.init_angle1 = angle1;
-    init_state.init_angle2 = angle2;
+    init_state.init_angle1 = angle1 + 0.f;
+    init_state.init_angle2 = angle2 - 0.f;
     init_state.init_yaw    = angle3;
     init_state.init_pitch  = angle4;
     init_state.init_Z      = z;
