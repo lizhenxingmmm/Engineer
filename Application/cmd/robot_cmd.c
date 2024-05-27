@@ -31,6 +31,12 @@
 // static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
 // #endif
 
+static float rc_mode_xy[2]={0,0};//x,y坐标
+static float rc_mode_xy_after_check[2]={0,0};
+static float rc_mode_yaw;
+static float rc_mode_pitch;
+static float rc_mode_roll;
+
 static Publisher_t *arm_cmd_pub;         // 底盘控制消息发布者
 static Subscriber_t *arm_feed_sub;       // 底盘反馈信息订阅者
 static Vision_Recv_s *vision_ctrl;       // 视觉控制信息
@@ -108,14 +114,41 @@ static void SuckerContorl2(void);
  */
 static void RemoteControlSet(void)
 {
+    float res_scara_angle[2];//第一个为大臂，第二个为小臂
     arm_cmd_send.arm_mode = ARM_KEY_CONTROL;
 
-    arm_cmd_send.maximal_arm += (rc_data[TEMP].key[KEY_PRESS].q - rc_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
-    arm_cmd_send.minimal_arm += (rc_data[TEMP].key[KEY_PRESS].a - rc_data[TEMP].key[KEY_PRESS].d) * 0.003f;
-    arm_cmd_send.finesse += (rc_data[TEMP].key[KEY_PRESS].z - rc_data[TEMP].key[KEY_PRESS].c) * 0.003f;
-    arm_cmd_send.pitch_arm += (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 0.003f;
-    arm_cmd_send.arm_status = ARM_NORMAL;
+    // arm_cmd_send.maximal_arm += (rc_data[TEMP].key[KEY_PRESS].q - rc_data[TEMP].key[KEY_PRESS].e) * 0.0015f;
+    // arm_cmd_send.minimal_arm += (rc_data[TEMP].key[KEY_PRESS].a - rc_data[TEMP].key[KEY_PRESS].d) * 0.003f;
+    // arm_cmd_send.finesse += (rc_data[TEMP].key[KEY_PRESS].z - rc_data[TEMP].key[KEY_PRESS].c) * 0.003f;
+    // arm_cmd_send.pitch_arm += (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 0.003f;
+    // arm_cmd_send.arm_status = ARM_NORMAL;
 
+    rc_mode_xy[0]+=(rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s);
+    rc_mode_xy[1]+=(rc_data[TEMP].key[KEY_PRESS].a - rc_data[TEMP].key[KEY_PRESS].d);
+    //x限位
+    if(rc_mode_xy[0]>ARMLENGHT1+ARMLENGHT2)
+    {
+        rc_mode_xy[0]=ARMLENGHT1+ARMLENGHT2;
+    }
+    if(rc_mode_xy[0]<0)
+    {
+        rc_mode_xy[0]=0;
+    }
+    //y限位
+    if(rc_mode_xy[1]>ARMLENGHT1+ARMLENGHT2)
+    {
+        rc_mode_xy[1]=ARMLENGHT1+ARMLENGHT2;
+    }
+    if(rc_mode_xy[1]<-300)
+    {
+        rc_mode_xy[1]=-300;
+    }
+    check_boundary_scara(rc_mode_xy[0],rc_mode_xy[1],rc_mode_xy_after_check);
+    scara_inverse_kinematics(rc_mode_xy[0],rc_mode_xy[1],ARMLENGHT1,ARMLENGHT2,2,res_scara_angle);
+    arm_cmd_send.maximal_arm=res_scara_angle[0];
+    arm_cmd_send.minimal_arm=res_scara_angle[1];
+    arm_cmd_send.finesse += (rc_data[TEMP].key[KEY_PRESS].z - rc_data[TEMP].key[KEY_PRESS].c) * 0.003f;
+    arm_cmd_send.pitch_arm += (rc_data[TEMP].key[KEY_PRESS].f - rc_data[TEMP].key[KEY_PRESS].v) * 0.003f;
     if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r) {
         arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
     } else {
@@ -128,7 +161,7 @@ static void RemoteControlSet(void)
     } else {
         arm_cmd_send.roll_mode = ROLL_KEEP;
     }
-    arm_cmd_send.roll = ((10.f * rc_data[TEMP].key[KEY_PRESS].f) - (10.f * rc_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
+    arm_cmd_send.roll = ((10.f * rc_data[TEMP].key[KEY_PRESS].b) - (10.f * rc_data[TEMP].key[KEY_PRESS].g)) + arm_fetch_data.roll;
 
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 
