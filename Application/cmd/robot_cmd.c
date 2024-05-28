@@ -406,6 +406,13 @@ static void VideoCustom(void)
             arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
             arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
             arm_cmd_send.arm_status  = ARM_NORMAL;
+
+            if (video_data[TEMP].key_data.left_button_down) {
+                arm_cmd_send.lift = -25000 + arm_fetch_data.height;
+            }
+            if (video_data[TEMP].key_data.right_button_down) {
+                arm_cmd_send.lift = 25000 + arm_fetch_data.height;
+            }
             // 保持吸盘位置高度
             // arm_cmd_send.lift += sin(arm_fetch_data.pitch_arm - PITCH_ZERO_POINT) * ARMLENGHT3;
             // if (video_data[TEMP].key[KEY_PRESS].c) {
