@@ -258,37 +258,41 @@ static void RemoteControlSet(void)
     // chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
     // chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
     // chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
+    int speed_scale = 1;
+    if (rc_data[TEMP].key[KEY_PRESS].f) {
+        speed_scale = 4;
+    }
     //平移缓启动
     if ((rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a)) || (rc_data[TEMP].rc.rocker_l_ > 200)) {
-        chassis_cmd_send.vx += 30;
+        chassis_cmd_send.vx += 30 * speed_scale;
     }
     if ((rc_data[TEMP].key[KEY_PRESS].a && (!rc_data[TEMP].key[KEY_PRESS].d)) || (rc_data[TEMP].rc.rocker_l_ < -200)) {
-        chassis_cmd_send.vx -= 30;
+        chassis_cmd_send.vx -= 30 * speed_scale;
     }
     if ((!rc_data[TEMP].key[KEY_PRESS].a) && (!rc_data[TEMP].key[KEY_PRESS].d) && (fabs(rc_data[TEMP].rc.rocker_l_) < 200)) {
         chassis_cmd_send.vx = 0;
     }
-    if (chassis_cmd_send.vx > 7000) {
-        chassis_cmd_send.vx = 7000;
+    if (chassis_cmd_send.vx > 7000 * speed_scale) {
+        chassis_cmd_send.vx = 7000 * speed_scale;
     }
-    if (chassis_cmd_send.vx < -7000) {
-        chassis_cmd_send.vx = -7000;
+    if (chassis_cmd_send.vx < -7000 * speed_scale) {
+        chassis_cmd_send.vx = -7000 * speed_scale;
     }
     //前进缓启动
     if ((rc_data[TEMP].key[KEY_PRESS].w && (!rc_data[TEMP].key[KEY_PRESS].s)) || (rc_data[TEMP].rc.rocker_l1 > 200)) {
-        chassis_cmd_send.vy += 300;
+        chassis_cmd_send.vy += 300 * speed_scale;
     }
     if ((rc_data[TEMP].key[KEY_PRESS].s && (!rc_data[TEMP].key[KEY_PRESS].w)) || (rc_data[TEMP].rc.rocker_l1 < -200)) {
-        chassis_cmd_send.vy -= 300;
+        chassis_cmd_send.vy -= 300 * speed_scale;
     }
     if ((!rc_data[TEMP].key[KEY_PRESS].s) && (!rc_data[TEMP].key[KEY_PRESS].w) && (fabs(rc_data[TEMP].rc.rocker_l1) < 200)) {
         chassis_cmd_send.vy = 0;
     }
-    if (chassis_cmd_send.vy > 15000) {
-        chassis_cmd_send.vy = 15000;
+    if (chassis_cmd_send.vy > 15000 * speed_scale) {
+        chassis_cmd_send.vy = 15000 * speed_scale;
     }
-    if (chassis_cmd_send.vy < -15000) {
-        chassis_cmd_send.vy = -15000;
+    if (chassis_cmd_send.vy < -15000 * speed_scale) {
+        chassis_cmd_send.vy = -15000 * speed_scale;
     }
     // chassis_cmd_send.vx = (rc_data[TEMP].key[KEY_PRESS].d - rc_data[TEMP].key[KEY_PRESS].a) * 30000 * 0.5f;
     // chassis_cmd_send.vy = (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 30000 * 0.5f;
@@ -317,8 +321,7 @@ static void RemoteControlSet(void)
         VisionContorl();
         //更新位置
         scara_forward_kinematics(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, ARMLENGHT1, ARMLENGHT2, rc_mode_xy);
-        yaw_offset             = arm_fetch_data.maximal_arm + arm_fetch_data.minimal_arm + arm_fetch_data.finesse;
-        arm_cmd_send.pitch_arm = arm_fetch_data.pitch_arm;
+        yaw_offset = arm_fetch_data.maximal_arm + arm_fetch_data.minimal_arm + arm_fetch_data.finesse;
     }
 }
 
