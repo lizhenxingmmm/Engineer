@@ -48,7 +48,7 @@ static void VideoControlSet(void);                // 图传链路控制量设置
 static void EmergencyHandler(void);
 static RC_ctrl_t *rc_data;       // 遥控器数据指针,初始化时返回
 static Video_ctrl_t *video_data; // 视觉数据指针,初始化时返回
-
+static void VisionContorl(void);
 /**
  * @brief 机器人核心控制任务初始化,会被RobotInit()调用
  *
@@ -313,6 +313,9 @@ static void RemoteControlSet(void)
         chassis_cmd_send.trans_mode = TRANS_STOP;
     }
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
+    if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].x) {
+        VisionContorl();
+    }
 }
 
 /**
