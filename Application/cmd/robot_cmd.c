@@ -200,20 +200,20 @@ static void RemoteControlSet(void)
         arm_cmd_send.pitch_arm = PI / 2;
     }
     arm_cmd_send.finesse = yaw_offset - res_scara_angle[0] - res_scara_angle[1];
-    //放矿模式基础位置
-    //摆到放矿位置
-    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 1) {
-        arm_cmd_send.maximal_arm = 1.42956f;
-        arm_cmd_send.minimal_arm = 2.01921f;
-        arm_cmd_send.finesse     = 0.f + yaw_offset;
-        arm_cmd_send.pitch_arm   = -PI / 2;
-    }
-    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 2) {
-        arm_cmd_send.maximal_arm = 0.2244f;
-        arm_cmd_send.minimal_arm = 2.03997f;
-        arm_cmd_send.finesse     = 0.0570f;
-        arm_cmd_send.pitch_arm   = -PI / 2;
-    }
+    // //放矿模式基础位置
+    // //摆到放矿位置
+    // if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 1) {
+    //     arm_cmd_send.maximal_arm = 1.42956f;
+    //     arm_cmd_send.minimal_arm = 2.01921f;
+    //     arm_cmd_send.finesse     = 0.f + yaw_offset;
+    //     arm_cmd_send.pitch_arm   = -PI / 2;
+    // }
+    // if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 2) {
+    //     arm_cmd_send.maximal_arm = 0.2244f;
+    //     arm_cmd_send.minimal_arm = 2.03997f;
+    //     arm_cmd_send.finesse     = 0.0570f;
+    //     arm_cmd_send.pitch_arm   = -PI / 2;
+    // }
     //抬升
     if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r || switch_left_down_flag || switch_left_up_flag) {
         // arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
@@ -316,13 +316,13 @@ static void RemoteControlSet(void)
     } else {
         chassis_cmd_send.trans_mode = TRANS_STOP;
     }
-    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
     if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].x) {
         VisionContorl();
         //更新位置
         scara_forward_kinematics(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, ARMLENGHT1, ARMLENGHT2, rc_mode_xy);
         yaw_offset = arm_fetch_data.maximal_arm + arm_fetch_data.minimal_arm + arm_fetch_data.finesse;
     }
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
 /**
