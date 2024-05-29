@@ -126,18 +126,18 @@ static void RemoteControlSet(void)
         switch_left_up_flag   = 0;
     }
     //取银矿模式
-    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_X] % 2 == 1) {
+    if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].x) {
         rc_mode_xy[0]          = 250;
         arm_cmd_send.pitch_arm = -PI / 2;
     }
     //取金矿模式
-    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_C] % 2 == 1) {
+    if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].c) {
         rc_mode_xy[1]          = 0;
         arm_cmd_send.pitch_arm = 0;
         yaw_offset             = 0;
     }
     //前两轴解算部分
-    if (!(rc_data[TEMP].key[KEY_PRESS].shift)) {
+    if (!(rc_data[TEMP].key[KEY_PRESS].ctrl)) {
         rc_mode_xy[1] -= rc_data[TEMP].mouse.x / 50;
         rc_mode_xy[0] -= rc_data[TEMP].mouse.y / 30;
     }
@@ -173,7 +173,7 @@ static void RemoteControlSet(void)
     arm_cmd_send.minimal_arm = res_scara_angle[1];
     //末端三轴和抬升部分
     // yaw pitch
-    if ((!(rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l && rc_data[TEMP].key[KEY_PRESS].shift)) && (rc_data[TEMP].key[KEY_PRESS].shift)) {
+    if ((!(rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l && rc_data[TEMP].key[KEY_PRESS].shift)) && (rc_data[TEMP].key[KEY_PRESS].ctrl)) {
         if (rc_data[TEMP].mouse.x > 10) {
             yaw_offset -= 0.01;
         }
@@ -181,10 +181,10 @@ static void RemoteControlSet(void)
             yaw_offset += 0.01;
         }
         if (rc_data[TEMP].mouse.y > 10) {
-            arm_cmd_send.pitch_arm += 0.01;
+            arm_cmd_send.pitch_arm -= 0.01;
         }
         if (rc_data[TEMP].mouse.y < -10) {
-            arm_cmd_send.pitch_arm -= 0.01;
+            arm_cmd_send.pitch_arm += 0.01;
         }
     }
     if (yaw_offset > PI) {
@@ -259,10 +259,10 @@ static void RemoteControlSet(void)
     // chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
     // chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
     //平移缓启动
-    if (rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a) || (rc_data[TEMP].rc.rocker_l_ > 200)) {
+    if ((rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a)) || (rc_data[TEMP].rc.rocker_l_ > 200)) {
         chassis_cmd_send.vx += 30;
     }
-    if (rc_data[TEMP].key[KEY_PRESS].a && (!rc_data[TEMP].key[KEY_PRESS].d) || (rc_data[TEMP].rc.rocker_l_ < -200)) {
+    if ((rc_data[TEMP].key[KEY_PRESS].a && (!rc_data[TEMP].key[KEY_PRESS].d)) || (rc_data[TEMP].rc.rocker_l_ < -200)) {
         chassis_cmd_send.vx -= 30;
     }
     if ((!rc_data[TEMP].key[KEY_PRESS].a) && (!rc_data[TEMP].key[KEY_PRESS].d) && (fabs(rc_data[TEMP].rc.rocker_l_) < 200)) {
@@ -275,10 +275,10 @@ static void RemoteControlSet(void)
         chassis_cmd_send.vx = -7000;
     }
     //前进缓启动
-    if (rc_data[TEMP].key[KEY_PRESS].w && (!rc_data[TEMP].key[KEY_PRESS].s) || (rc_data[TEMP].rc.rocker_l1 > 200)) {
+    if ((rc_data[TEMP].key[KEY_PRESS].w && (!rc_data[TEMP].key[KEY_PRESS].s)) || (rc_data[TEMP].rc.rocker_l1 > 200)) {
         chassis_cmd_send.vy += 300;
     }
-    if (rc_data[TEMP].key[KEY_PRESS].s && (!rc_data[TEMP].key[KEY_PRESS].w) || (rc_data[TEMP].rc.rocker_l1 < -200)) {
+    if ((rc_data[TEMP].key[KEY_PRESS].s && (!rc_data[TEMP].key[KEY_PRESS].w)) || (rc_data[TEMP].rc.rocker_l1 < -200)) {
         chassis_cmd_send.vy -= 300;
     }
     if ((!rc_data[TEMP].key[KEY_PRESS].s) && (!rc_data[TEMP].key[KEY_PRESS].w) && (fabs(rc_data[TEMP].rc.rocker_l1) < 200)) {
@@ -315,6 +315,10 @@ static void RemoteControlSet(void)
     arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
     if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].x) {
         VisionContorl();
+        //更新位置
+        scara_forward_kinematics(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, ARMLENGHT1, ARMLENGHT2, rc_mode_xy);
+        yaw_offset             = arm_fetch_data.maximal_arm + arm_fetch_data.minimal_arm + arm_fetch_data.finesse;
+        arm_cmd_send.pitch_arm = arm_fetch_data.pitch_arm;
     }
 }
 
