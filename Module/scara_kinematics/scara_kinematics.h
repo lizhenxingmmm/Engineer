@@ -4,14 +4,14 @@
 #include "main.h"
 #include <math.h>
 #include "VideoTransmitter.h"
-#define ARMLENGHT1          220 // unit mm 单位 毫米
-#define ARMLENGHT2          220
-#define ARMLENGHT3          210
-#define MAIN_ARM_ZERO_POINT -0.96
-#define MID_ARM_ZERO_POINT  0.43
-#define YAW_ZERO_POINT      0.03
-#define PITCH_ZERO_POINT    0.66
-#define sqrt2               1.414213f
+#define ARMLENGHT1 220 // unit mm 单位 毫米
+#define ARMLENGHT2 220
+#define ARMLENGHT3 210
+// #define MAIN_ARM_ZERO_POINT -0.96
+// #define MID_ARM_ZERO_POINT  0.43
+// #define YAW_ZERO_POINT      0.03
+// #define PITCH_ZERO_POINT    0.66
+#define sqrt2 1.414213f
 
 #pragma pack(1)
 typedef struct

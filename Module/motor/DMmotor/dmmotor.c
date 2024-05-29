@@ -182,6 +182,7 @@ DM_MotorInstance *DMMotorInit(Motor_Init_Config_s *config)
     // DMMotorSetMode(DM_CMD_RESET_MODE, motor);
     DWT_Delay(0.1);
     // !!! 慎用，懒得焊TXRX线 DMMotorSetMode(DM_CMD_ZERO_POSITION, motor);
+    // DMMotorSetMode(DM_CMD_ZERO_POSITION, motor);1
     DWT_Delay(0.1);
     dm_motor_instance[idx++] = motor;
     return motor;

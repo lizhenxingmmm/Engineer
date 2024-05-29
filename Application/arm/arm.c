@@ -110,7 +110,7 @@ void ArmInit(void)
                 .Derivative_LPF_RC = 0.01,
             },
             .speed_PID = {
-                .Kp = 1,  // 10
+                .Kp = 10, // 10
                 .Ki = 75, // 1
                 .Kd = 0,
                 // .CoefA         = 0.2,
@@ -275,7 +275,9 @@ void ARMTask(void)
         VAL_LIMIT(arm_cmd_recv.finesse, FINE_MIN, FINE_MAX);
     }
     VAL_LIMIT(arm_cmd_recv.pitch_arm, PITCH_MIN, PITCH_MAX);
-    VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
+    if (arm_cmd_recv.lift_mode == LIFT_ANGLE_MODE) {
+        VAL_LIMIT(arm_cmd_recv.lift, HEIGHT_MIN, HEIGHT_MAX);
+    }
     DMMotorSetRef(maximal_arm, arm_cmd_recv.maximal_arm); // MIN -1.0,MAX 0.75
     DMMotorSetRef(minimal_arm, arm_cmd_recv.minimal_arm); // MIN -2.0,MAX 2.7
     DMMotorSetRef(finesse, arm_cmd_recv.finesse);         // MIN -1.6,MAX 1.9
