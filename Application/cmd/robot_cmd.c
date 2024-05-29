@@ -248,7 +248,7 @@ static void RemoteControlSet(void)
     }
     arm_cmd_send.roll = ((30.f * rc_data[TEMP].key[KEY_PRESS].e) - (30.f * rc_data[TEMP].key[KEY_PRESS].q)) + arm_fetch_data.roll;
     //吸盘，遥控右拨杆上为开
-    if (switch_is_up(rc_data[TEMP].rc.switch_right)) {
+    if ((rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 1) || (rc_data[TEMP].rc.switch_right)) {
         arm_cmd_send.sucker_mode = SUCKER_ON;
     } else {
         arm_cmd_send.sucker_mode = SUCKER_OFF;
@@ -259,13 +259,13 @@ static void RemoteControlSet(void)
     // chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
     // chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
     //平移缓启动
-    if (rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a)) {
+    if (rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a) || (rc_data[TEMP].rc.rocker_l_ > 200)) {
         chassis_cmd_send.vx += 30;
     }
-    if (rc_data[TEMP].key[KEY_PRESS].a && (!rc_data[TEMP].key[KEY_PRESS].d)) {
+    if (rc_data[TEMP].key[KEY_PRESS].a && (!rc_data[TEMP].key[KEY_PRESS].d) || (rc_data[TEMP].rc.rocker_l_ < -200)) {
         chassis_cmd_send.vx -= 30;
     }
-    if ((!rc_data[TEMP].key[KEY_PRESS].a) && (!rc_data[TEMP].key[KEY_PRESS].d)) {
+    if ((!rc_data[TEMP].key[KEY_PRESS].a) && (!rc_data[TEMP].key[KEY_PRESS].d) && (fabs(rc_data[TEMP].rc.rocker_l_) < 200)) {
         chassis_cmd_send.vx = 0;
     }
     if (chassis_cmd_send.vx > 7000) {
@@ -275,13 +275,13 @@ static void RemoteControlSet(void)
         chassis_cmd_send.vx = -7000;
     }
     //前进缓启动
-    if (rc_data[TEMP].key[KEY_PRESS].w && (!rc_data[TEMP].key[KEY_PRESS].s)) {
+    if (rc_data[TEMP].key[KEY_PRESS].w && (!rc_data[TEMP].key[KEY_PRESS].s) || (rc_data[TEMP].rc.rocker_l1 > 200)) {
         chassis_cmd_send.vy += 300;
     }
-    if (rc_data[TEMP].key[KEY_PRESS].s && (!rc_data[TEMP].key[KEY_PRESS].w)) {
+    if (rc_data[TEMP].key[KEY_PRESS].s && (!rc_data[TEMP].key[KEY_PRESS].w) || (rc_data[TEMP].rc.rocker_l1 < -200)) {
         chassis_cmd_send.vy -= 300;
     }
-    if ((!rc_data[TEMP].key[KEY_PRESS].s) && (!rc_data[TEMP].key[KEY_PRESS].w)) {
+    if ((!rc_data[TEMP].key[KEY_PRESS].s) && (!rc_data[TEMP].key[KEY_PRESS].w) && (fabs(rc_data[TEMP].rc.rocker_l1) < 200)) {
         chassis_cmd_send.vy = 0;
     }
     if (chassis_cmd_send.vy > 15000) {
@@ -294,8 +294,10 @@ static void RemoteControlSet(void)
     // chassis_cmd_send.vy = (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 30000 * 0.5f;
     if (rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l && rc_data[TEMP].key[KEY_PRESS].shift) {
         chassis_cmd_send.wz = (float)rc_data[TEMP].mouse.x * 160;
-    } else {
+    } else if (fabs(rc_data[TEMP].rc.dial) < 200) {
         chassis_cmd_send.wz = 0;
+    } else {
+        chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;
     }
     //图传角度
     if (rc_data[TEMP].key_count[KEY_PRESS][Key_V] % 2 == 1) {
@@ -662,103 +664,304 @@ __attribute__((used)) static void VideoHeigtInit(void)
 static int mode;
 static void VideoControlSet(void)
 {
-    // 机械臂控制
-    switch (video_data[TEMP].key_count[KEY_PRESS][Key_B] % 2) {
-        case 0:
-            mode = (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] -
-                    video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_S] + 100 * ARM_MODE_COUNT) %
-                   ARM_MODE_COUNT;
-            break;
-        default:
-            mode = 999;
-            break;
-    }
-    // if (video_data[TEMP].custom_control_mode == 0) {
-    switch (mode) {
-        case 0:
-            VideoKey(); // 键盘控制
-            // VisionContorl();
-            break;
-        case 1:
-            VideoCustom(); // 自定义控制器
-            break;
-        case 2:
-            VisionContorl(); // 视觉控制
-            break;
-        case 3:
-            VideoSlightlyContorl(); // 轻微控制器
-            break;
-        case 999:
-            VideoAutoGet(); // 一键取矿
-            break;
-        // case 5:
-        //     VideoHeigtInit(); // 高度初始化
-        //     break;
-        default:
-            break;
-    }
+    arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
+    float res_scara_angle[2]; //第一个为大臂，第二个为小臂
+    uint8_t switch_left_down_flag;
+    uint8_t switch_left_up_flag;
+    // if (switch_is_down(rc_data[TEMP].rc.switch_left)) {
+    //     switch_left_down_flag = 1;
+    //     switch_left_up_flag   = 0;
+    // } else if (switch_is_up(rc_data[TEMP].rc.switch_left)) {
+    //     switch_left_down_flag = 0;
+    //     switch_left_up_flag   = 1;
     // } else {
-    //     // 接收到自定义控制器命令，转为自定义控制器拨杆切换模式
-    //     // code ...
+    //     switch_left_down_flag = 0;
+    //     switch_left_up_flag   = 0;
     // }
-    DebugModeControl();
-    SuckerContorl();
-
-    VAL_LIMIT(arm_cmd_send.maximal_arm, MAXARM_MIN, MAXARM_MAX);
-    VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
-    if (arm_cmd_send.pitch_arm > -0.1f) {
-        VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN2, FINE_MAX2);
+    //取银矿模式
+    if (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_X] % 2 == 1) {
+        rc_mode_xy[0]          = 250;
+        arm_cmd_send.pitch_arm = -PI / 2;
+    }
+    //取金矿模式
+    if (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_C] % 2 == 1) {
+        rc_mode_xy[1]          = 0;
+        arm_cmd_send.pitch_arm = 0;
+        yaw_offset             = 0;
+    }
+    //前两轴解算部分
+    if (!(video_data[TEMP].key[KEY_PRESS].shift)) {
+        rc_mode_xy[1] -= video_data[TEMP].key_data.mouse_x / 50;
+        rc_mode_xy[0] -= video_data[TEMP].key_data.mouse_y / 30;
+    }
+    // if (rc_data[TEMP].rc.rocker_r1 > 100) {
+    //     rc_mode_xy[0] += (rc_data[TEMP].rc.rocker_r1) / 240;
+    // }
+    // if (rc_data[TEMP].rc.rocker_r1 < -100) {
+    //     rc_mode_xy[0] += (rc_data[TEMP].rc.rocker_r1) / 240;
+    // }
+    // if (rc_data[TEMP].rc.rocker_r_ > 100) {
+    //     rc_mode_xy[1] -= (rc_data[TEMP].rc.rocker_r_) / 240;
+    // }
+    // if (rc_data[TEMP].rc.rocker_r_ < -100) {
+    //     rc_mode_xy[1] -= (rc_data[TEMP].rc.rocker_r_) / 240;
+    // }
+    // x限位
+    if (rc_mode_xy[0] > ARMLENGHT1 + ARMLENGHT2) {
+        rc_mode_xy[0] = ARMLENGHT1 + ARMLENGHT2;
+    }
+    if (rc_mode_xy[0] < 0) {
+        rc_mode_xy[0] = 0;
+    }
+    // y限位
+    if (rc_mode_xy[1] > 400) {
+        rc_mode_xy[1] = 400;
+    }
+    if (rc_mode_xy[1] < -228) {
+        rc_mode_xy[1] = -228;
+    }
+    check_boundary_scara_lefthand(rc_mode_xy[0], rc_mode_xy[1], rc_mode_xy_after_check);
+    scara_inverse_kinematics(rc_mode_xy_after_check[0], rc_mode_xy_after_check[1], ARMLENGHT1, ARMLENGHT2, 2, res_scara_angle);
+    arm_cmd_send.maximal_arm = res_scara_angle[0];
+    arm_cmd_send.minimal_arm = res_scara_angle[1];
+    //末端三轴和抬升部分
+    // yaw pitch
+    if ((!(video_data[TEMP].key_data.right_button_down && video_data[TEMP].key_data.left_button_down && video_data[TEMP].key[KEY_PRESS].shift)) && (video_data[TEMP].key[KEY_PRESS].shift)) {
+        if (video_data[TEMP].key_data.mouse_x > 10) {
+            yaw_offset -= 0.01;
+        }
+        if (video_data[TEMP].key_data.mouse_x < -10) {
+            yaw_offset += 0.01;
+        }
+        if (video_data[TEMP].key_data.mouse_y > 10) {
+            arm_cmd_send.pitch_arm += 0.01;
+        }
+        if (video_data[TEMP].key_data.mouse_y < -10) {
+            arm_cmd_send.pitch_arm -= 0.01;
+        }
+    }
+    if (yaw_offset > PI) {
+        yaw_offset = PI;
+    }
+    if (yaw_offset < -PI) {
+        yaw_offset = -PI;
+    }
+    if (arm_cmd_send.pitch_arm < -PI / 2) {
+        arm_cmd_send.pitch_arm = -PI / 2;
+    }
+    if (arm_cmd_send.pitch_arm > PI / 2) {
+        arm_cmd_send.pitch_arm = PI / 2;
+    }
+    arm_cmd_send.finesse = yaw_offset - res_scara_angle[0] - res_scara_angle[1];
+    //放矿模式基础位置
+    //摆到放矿位置
+    if (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 1) {
+        arm_cmd_send.maximal_arm = 1.42956f;
+        arm_cmd_send.minimal_arm = 2.01921f;
+        arm_cmd_send.finesse     = 0.f + yaw_offset;
+        arm_cmd_send.pitch_arm   = -PI / 2;
+    }
+    if (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 2) {
+        arm_cmd_send.maximal_arm = 0.2244f;
+        arm_cmd_send.minimal_arm = 2.03997f;
+        arm_cmd_send.finesse     = 0.0570f;
+        arm_cmd_send.pitch_arm   = -PI / 2;
+    }
+    //抬升
+    if (video_data[TEMP].key_data.left_button_down || video_data[TEMP].key_data.right_button_down || switch_left_down_flag || switch_left_up_flag) {
+        // arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
+        arm_cmd_send.lift_mode = LIFT_SPEED_MODE;
     } else {
-        VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
+        arm_cmd_send.lift_mode = LIFT_KEEP;
     }
-    VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
-    if (arm_cmd_send.lift_mode == LIFT_ANGLE_MODE)
-        VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
-    VAL_LIMIT(arm_cmd_send.roll, ROLL_MIN, ROLL_MAX);
-
-    switch (video_data[TEMP].key_count[KEY_PRESS][Key_V] % 2) {
-        case 0:
-            arm_cmd_send.video_angle = PITCH_90;
-            break;
-        default:
-            arm_cmd_send.video_angle = PITCH_120;
-            break;
-    }
-
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 3) {
-        case 0:
-            chassis_cmd_send.chassis_mode       = CHASSIS_FAST;
-            chassis_cmd_send.chassis_speed_buff = 0.51;
-            break;
-        case 1:
-            chassis_cmd_send.chassis_mode       = CHASSIS_SLOW;
-            chassis_cmd_send.chassis_speed_buff = 0.5;
-            break;
-        default:
-            chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
-            break;
-    }
-    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
-        chassis_cmd_send.ui_mode = UI_REFRESH;
+    if (video_data[TEMP].key_data.left_button_down && (!video_data[TEMP].key_data.right_button_down)) {
+        arm_cmd_send.lift += 300;
+    } else if (video_data[TEMP].key_data.right_button_down && (!video_data[TEMP].key_data.left_button_down)) {
+        arm_cmd_send.lift -= 300;
     } else {
-        chassis_cmd_send.ui_mode = UI_KEEP;
+        arm_cmd_send.lift = 0;
     }
-
-    if (video_data[TEMP].key[KEY_PRESS].g) {
+    // if (switch_left_down_flag) {
+    //     arm_cmd_send.lift = 10000;
+    // }
+    // if (switch_left_up_flag) {
+    //     arm_cmd_send.lift = -10000;
+    // }
+    if (arm_cmd_send.lift > 30000) {
+        arm_cmd_send.lift = 30000;
+    }
+    if (arm_cmd_send.lift < -30000) {
+        arm_cmd_send.lift = -30000;
+    }
+    // roll
+    if (video_data[TEMP].key[KEY_PRESS].q || video_data[TEMP].key[KEY_PRESS].e) {
+        arm_cmd_send.roll_mode = ROLL_ANGLE_MODE;
+    } else {
+        arm_cmd_send.roll_mode = ROLL_KEEP;
+    }
+    arm_cmd_send.roll = ((30.f * video_data[TEMP].key[KEY_PRESS].e) - (30.f * video_data[TEMP].key[KEY_PRESS].q)) + arm_fetch_data.roll;
+    //吸盘，遥控右拨杆上为开
+    if ((video_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 1)) {
+        arm_cmd_send.sucker_mode = SUCKER_ON;
+    } else {
+        arm_cmd_send.sucker_mode = SUCKER_OFF;
+    }
+    chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
+    // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
+    // chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
+    // chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
+    // chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
+    //平移缓启动
+    if (video_data[TEMP].key[KEY_PRESS].d && (!video_data[TEMP].key[KEY_PRESS].a)) {
+        chassis_cmd_send.vx += 30;
+    }
+    if (video_data[TEMP].key[KEY_PRESS].a && (!video_data[TEMP].key[KEY_PRESS].d)) {
+        chassis_cmd_send.vx -= 30;
+    }
+    if ((!video_data[TEMP].key[KEY_PRESS].a) && (!video_data[TEMP].key[KEY_PRESS].d)) {
+        chassis_cmd_send.vx = 0;
+    }
+    if (chassis_cmd_send.vx > 7000) {
+        chassis_cmd_send.vx = 7000;
+    }
+    if (chassis_cmd_send.vx < -7000) {
+        chassis_cmd_send.vx = -7000;
+    }
+    //前进缓启动
+    if (video_data[TEMP].key[KEY_PRESS].w && (!video_data[TEMP].key[KEY_PRESS].s)) {
+        chassis_cmd_send.vy += 300;
+    }
+    if (video_data[TEMP].key[KEY_PRESS].s && (!video_data[TEMP].key[KEY_PRESS].w)) {
+        chassis_cmd_send.vy -= 300;
+    }
+    if ((!video_data[TEMP].key[KEY_PRESS].s) && (!video_data[TEMP].key[KEY_PRESS].w)) {
+        chassis_cmd_send.vy = 0;
+    }
+    if (chassis_cmd_send.vy > 15000) {
+        chassis_cmd_send.vy = 15000;
+    }
+    if (chassis_cmd_send.vy < -15000) {
+        chassis_cmd_send.vy = -15000;
+    }
+    // chassis_cmd_send.vx = (rc_data[TEMP].key[KEY_PRESS].d - rc_data[TEMP].key[KEY_PRESS].a) * 30000 * 0.5f;
+    // chassis_cmd_send.vy = (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 30000 * 0.5f;
+    if (video_data[TEMP].key_data.right_button_down && video_data[TEMP].key_data.left_button_down && video_data[TEMP].key[KEY_PRESS].shift) {
+        chassis_cmd_send.wz = (float)video_data[TEMP].key_data.mouse_x * 160;
+    } else {
+        chassis_cmd_send.wz = 0;
+    }
+    //图传角度
+    if (video_data[TEMP].key_count[KEY_PRESS][Key_V] % 2 == 1) {
+        arm_cmd_send.video_angle = PITCH_120;
+    } else {
+        arm_cmd_send.video_angle = PITCH_90;
+    }
+    if (video_data[TEMP].key[KEY_PRESS].ctrl && video_data[TEMP].key[KEY_PRESS].z) {
+        chassis_cmd_send.trans_mode = TRANS_DIRECT;
+    } else if (video_data[TEMP].key[KEY_PRESS].ctrl && video_data[TEMP].key[KEY_PRESS].c) {
+        chassis_cmd_send.trans_mode = TRANS_REVERSE;
+    } else {
         chassis_cmd_send.trans_mode = TRANS_STOP;
     }
-    if (video_data[TEMP].key[KEY_PRESS_WITH_SHIFT].g) {
-        chassis_cmd_send.trans_mode = TRANS_DIRECT;
-    }
-    if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].g) {
-        chassis_cmd_send.trans_mode = TRANS_REVERSE;
-    }
+    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 
-    chassis_cmd_send.vx = (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
-    chassis_cmd_send.vy = (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测                                                                                                         // test
-    chassis_cmd_send.wz = (float)video_data[TEMP].key_data.mouse_x * 10 +
-                          (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 8000 * chassis_cmd_send.chassis_speed_buff;
-    chassis_cmd_send.chassis_speed_buff = 1; // test
+    // // 机械臂控制
+    // switch (video_data[TEMP].key_count[KEY_PRESS][Key_B] % 2) {
+    //     case 0:
+    //         mode = (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] -
+    //                 video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_S] + 100 * ARM_MODE_COUNT) %
+    //                ARM_MODE_COUNT;
+    //         break;
+    //     default:
+    //         mode = 999;
+    //         break;
+    // }
+    // // if (video_data[TEMP].custom_control_mode == 0) {
+    // switch (mode) {
+    //     case 0:
+    //         VideoKey(); // 键盘控制
+    //         // VisionContorl();
+    //         break;
+    //     case 1:
+    //         VideoCustom(); // 自定义控制器
+    //         break;
+    //     case 2:
+    //         VisionContorl(); // 视觉控制
+    //         break;
+    //     case 3:
+    //         VideoSlightlyContorl(); // 轻微控制器
+    //         break;
+    //     case 999:
+    //         VideoAutoGet(); // 一键取矿
+    //         break;
+    //     // case 5:
+    //     //     VideoHeigtInit(); // 高度初始化
+    //     //     break;
+    //     default:
+    //         break;
+    // }
+    // // } else {
+    // //     // 接收到自定义控制器命令，转为自定义控制器拨杆切换模式
+    // //     // code ...
+    // // }
+    // DebugModeControl();
+    // SuckerContorl();
+
+    // VAL_LIMIT(arm_cmd_send.maximal_arm, MAXARM_MIN, MAXARM_MAX);
+    // VAL_LIMIT(arm_cmd_send.minimal_arm, MINARM_MIN, MINARM_MAX);
+    // if (arm_cmd_send.pitch_arm > -0.1f) {
+    //     VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN2, FINE_MAX2);
+    // } else {
+    //     VAL_LIMIT(arm_cmd_send.finesse, FINE_MIN, FINE_MAX);
+    // }
+    // VAL_LIMIT(arm_cmd_send.pitch_arm, PITCH_MIN, PITCH_MAX);
+    // if (arm_cmd_send.lift_mode == LIFT_ANGLE_MODE)
+    //     VAL_LIMIT(arm_cmd_send.lift, HEIGHT_MIN, HEIGHT_MAX);
+    // VAL_LIMIT(arm_cmd_send.roll, ROLL_MIN, ROLL_MAX);
+
+    // switch (video_data[TEMP].key_count[KEY_PRESS][Key_V] % 2) {
+    //     case 0:
+    //         arm_cmd_send.video_angle = PITCH_90;
+    //         break;
+    //     default:
+    //         arm_cmd_send.video_angle = PITCH_120;
+    //         break;
+    // }
+
+    // switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 3) {
+    //     case 0:
+    //         chassis_cmd_send.chassis_mode       = CHASSIS_FAST;
+    //         chassis_cmd_send.chassis_speed_buff = 0.51;
+    //         break;
+    //     case 1:
+    //         chassis_cmd_send.chassis_mode       = CHASSIS_SLOW;
+    //         chassis_cmd_send.chassis_speed_buff = 0.5;
+    //         break;
+    //     default:
+    //         chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
+    //         break;
+    // }
+    // if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].v) {
+    //     chassis_cmd_send.ui_mode = UI_REFRESH;
+    // } else {
+    //     chassis_cmd_send.ui_mode = UI_KEEP;
+    // }
+
+    // if (video_data[TEMP].key[KEY_PRESS].g) {
+    //     chassis_cmd_send.trans_mode = TRANS_STOP;
+    // }
+    // if (video_data[TEMP].key[KEY_PRESS_WITH_SHIFT].g) {
+    //     chassis_cmd_send.trans_mode = TRANS_DIRECT;
+    // }
+    // if (video_data[TEMP].key[KEY_PRESS_WITH_CTRL].g) {
+    //     chassis_cmd_send.trans_mode = TRANS_REVERSE;
+    // }
+
+    // chassis_cmd_send.vx = (video_data[TEMP].key[KEY_PRESS].d - video_data[TEMP].key[KEY_PRESS].a) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测
+    // chassis_cmd_send.vy = (video_data[TEMP].key[KEY_PRESS].w - video_data[TEMP].key[KEY_PRESS].s) * 30000 * chassis_cmd_send.chassis_speed_buff; // 系数待测                                                                                                         // test
+    // chassis_cmd_send.wz = (float)video_data[TEMP].key_data.mouse_x * 10 +
+    //                       (-video_data[TEMP].key[KEY_PRESS].q + video_data[TEMP].key[KEY_PRESS].e) * 8000 * chassis_cmd_send.chassis_speed_buff;
+    // chassis_cmd_send.chassis_speed_buff = 1; // test
 }
 
 /**
