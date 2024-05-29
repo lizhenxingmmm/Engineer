@@ -195,10 +195,10 @@ void ChassisTask()
             DJIMotorSetRef(trans, 0);
             break;
         case TRANS_DIRECT:
-            DJIMotorSetRef(trans, -10000);
+            DJIMotorSetRef(trans, -20000);
             break;
         case TRANS_REVERSE:
-            DJIMotorSetRef(trans, 10000);
+            DJIMotorSetRef(trans, 20000);
             break;
         default:
             break;
