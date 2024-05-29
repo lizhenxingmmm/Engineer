@@ -108,9 +108,6 @@ static void SuckerContorl2(void);
  *
  */
 static float yaw_offset = 0;
-static uint8_t load_step_flag;
-static uint32_t load_count        = 350; //差不多1秒
-static uint8_t load_finished_flag = 1;   //默认已完成
 static void RemoteControlSet(void)
 {
     arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
@@ -127,7 +124,7 @@ static void RemoteControlSet(void)
         switch_left_down_flag = 0;
         switch_left_up_flag   = 0;
     }
-    /******************************非一键模式********************************/
+
     //传送带
     if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].z) {
         chassis_cmd_send.trans_mode = TRANS_DIRECT;
@@ -178,6 +175,10 @@ static void RemoteControlSet(void)
     if (rc_mode_xy[1] < -228) {
         rc_mode_xy[1] = -228;
     }
+    check_boundary_scara_lefthand(rc_mode_xy[0], rc_mode_xy[1], rc_mode_xy_after_check);
+    scara_inverse_kinematics(rc_mode_xy_after_check[0], rc_mode_xy_after_check[1], ARMLENGHT1, ARMLENGHT2, 2, res_scara_angle);
+    arm_cmd_send.maximal_arm = res_scara_angle[0];
+    arm_cmd_send.minimal_arm = res_scara_angle[1];
     //末端三轴和抬升部分
     // yaw pitch
     if ((!(rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l && rc_data[TEMP].key[KEY_PRESS].shift)) && (rc_data[TEMP].key[KEY_PRESS].ctrl)) {
@@ -206,7 +207,8 @@ static void RemoteControlSet(void)
     if (arm_cmd_send.pitch_arm > PI / 2) {
         arm_cmd_send.pitch_arm = PI / 2;
     }
-    arm_cmd_send.finesse = yaw_offset - arm_cmd_send.maximal_arm - arm_cmd_send.minimal_arm;
+
+    arm_cmd_send.finesse = yaw_offset - res_scara_angle[0] - res_scara_angle[1];
     //抬升
     if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r || switch_left_down_flag || switch_left_up_flag) {
         arm_cmd_send.lift_mode = LIFT_SPEED_MODE;
@@ -245,76 +247,6 @@ static void RemoteControlSet(void)
     } else {
         arm_cmd_send.sucker_mode = SUCKER_OFF;
     }
-    check_boundary_scara_lefthand(rc_mode_xy[0], rc_mode_xy[1], rc_mode_xy_after_check);
-    scara_inverse_kinematics(rc_mode_xy_after_check[0], rc_mode_xy_after_check[1], ARMLENGHT1, ARMLENGHT2, 2, res_scara_angle);
-    arm_cmd_send.maximal_arm = res_scara_angle[0];
-    arm_cmd_send.minimal_arm = res_scara_angle[1];
-    /*********************************一键取放矿模式**************************/
-    //覆盖非一键模式数据
-    //一键放矿,要求初始抬升有一定高度
-    float target_xy[2] = {-156.f, 156.f};
-    //一键放矿指令来源
-    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_B] % 2 == 1) {
-        load_finished_flag = 0;
-    } else {
-        load_finished_flag = 1;
-    }
-    //一键放矿程序
-    if (load_finished_flag == 0) // back
-    {
-        float current_xy[2];
-        //传送带常转
-        chassis_cmd_send.trans_mode = TRANS_REVERSE;
-        //判断机械臂状态
-        scara_forward_kinematics(arm_fetch_data.maximal_arm, arm_fetch_data.minimal_arm, ARMLENGHT1, ARMLENGHT2, current_xy);
-        if (arm_fetch_data.minimal_arm > -0.2) {
-            load_step_flag = 0;
-        } else if ((fabs(current_xy[0] - target_xy[0]) < 10) && (fabs(current_xy[1] - target_xy[1]) < 10)) {
-            load_step_flag = 2;
-        } else {
-            load_step_flag = 1;
-        }
-        if (load_step_flag == 0) {
-            rc_mode_xy[1] += 10;
-            check_boundary_scara_lefthand(rc_mode_xy[0], rc_mode_xy[1], rc_mode_xy_after_check);
-            scara_inverse_kinematics(rc_mode_xy_after_check[0], rc_mode_xy_after_check[1], ARMLENGHT1, ARMLENGHT2, 2, res_scara_angle);
-            arm_cmd_send.maximal_arm = res_scara_angle[0];
-            arm_cmd_send.minimal_arm = res_scara_angle[1];
-            load_count               = 200;
-        }
-        if (load_step_flag == 1) {
-            float temp_angles[2];
-            scara_inverse_kinematics(target_xy[0], target_xy[1], ARMLENGHT1, ARMLENGHT2, 1, temp_angles);
-            arm_cmd_send.maximal_arm = temp_angles[0];
-            arm_cmd_send.minimal_arm = temp_angles[1];
-            yaw_offset               = PI;
-            load_count               = 200;
-        }
-        if (load_step_flag == 2 && load_count != 0) {
-            float temp_angles[2];
-            scara_inverse_kinematics(target_xy[0], target_xy[1], ARMLENGHT1, ARMLENGHT2, 1, temp_angles);
-            arm_cmd_send.maximal_arm = temp_angles[0];
-            arm_cmd_send.minimal_arm = temp_angles[1];
-            load_count--;
-            arm_cmd_send.lift_mode = LIFT_SPEED_MODE;
-            arm_cmd_send.lift      = 20000;
-            if (load_count < 200) {
-                arm_cmd_send.sucker_mode = SUCKER_OFF;
-            }
-        } else {
-            arm_cmd_send.lift_mode = LIFT_KEEP;
-        }
-        if (load_step_flag == 2 && load_count == 0) {
-            load_finished_flag = 1;
-            rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_B] += 1;
-            load_count == 200; //倒数复位
-        }
-        arm_cmd_send.finesse = yaw_offset - arm_cmd_send.maximal_arm - arm_cmd_send.minimal_arm;
-    }
-    if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].g) // get
-    {
-    }
-    /**********************************************************************************************************/
     //平移缓启动
     if ((rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a)) || (rc_data[TEMP].rc.rocker_l_ > 200)) {
         chassis_cmd_send.vx += 30;

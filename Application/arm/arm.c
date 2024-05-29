@@ -110,7 +110,7 @@ void ArmInit(void)
                 .Derivative_LPF_RC = 0.01,
             },
             .speed_PID = {
-                .Kp = 10, // 10
+                .Kp = 7,  // 10
                 .Ki = 75, // 1
                 .Kd = 0,
                 // .CoefA         = 0.2,
