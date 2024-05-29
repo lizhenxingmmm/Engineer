@@ -129,6 +129,7 @@ static void RemoteControlSet(void)
     if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].x) {
         rc_mode_xy[0]          = 250;
         arm_cmd_send.pitch_arm = -PI / 2;
+        yaw_offset             = 0;
     }
     //取金矿模式
     if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].c) {
@@ -214,6 +215,32 @@ static void RemoteControlSet(void)
     //     arm_cmd_send.finesse     = 0.0570f;
     //     arm_cmd_send.pitch_arm   = -PI / 2;
     // }
+    //吸盘，遥控右拨杆上为开
+    if ((rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 1) || (rc_data[TEMP].rc.switch_right)) {
+        arm_cmd_send.sucker_mode = SUCKER_ON;
+    } else {
+        arm_cmd_send.sucker_mode = SUCKER_OFF;
+    }
+    //一键放矿
+    if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].b) {
+        chassis_cmd_send.trans_mode = TRANS_REVERSE;
+        if (rc_mode_xy[1] < 400) {
+            rc_mode_xy[0] = 250;
+            rc_mode_xy[1] += 4;
+            arm_cmd_send.pitch_arm = -PI / 2;
+            yaw_offset             = 0;
+        } else if (rc_mode_xy[1] == 400) {
+            arm_cmd_send.maximal_arm = 1.42956f;
+            arm_cmd_send.minimal_arm = 2.01921f;
+            arm_cmd_send.finesse     = 0.f + yaw_offset;
+            arm_cmd_send.pitch_arm   = -PI / 2;
+        }
+        if (fabs(arm_fetch_data.minimal_arm - 2.01921f)) {
+            arm_cmd_send.sucker_mode = SUCKER_OFF;
+        }
+    } else {
+        chassis_cmd_send.trans_mode = TRANS_STOP;
+    }
     //抬升
     if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r || switch_left_down_flag || switch_left_up_flag) {
         // arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
@@ -247,13 +274,6 @@ static void RemoteControlSet(void)
         arm_cmd_send.roll_mode = ROLL_KEEP;
     }
     arm_cmd_send.roll = ((30.f * rc_data[TEMP].key[KEY_PRESS].e) - (30.f * rc_data[TEMP].key[KEY_PRESS].q)) + arm_fetch_data.roll;
-    //吸盘，遥控右拨杆上为开
-    if ((rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 1) || (rc_data[TEMP].rc.switch_right)) {
-        arm_cmd_send.sucker_mode = SUCKER_ON;
-    } else {
-        arm_cmd_send.sucker_mode = SUCKER_OFF;
-    }
-    chassis_cmd_send.chassis_mode = CHASSIS_SLOW; // 底盘模式
     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
     // chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
     // chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
@@ -309,13 +329,13 @@ static void RemoteControlSet(void)
     } else {
         arm_cmd_send.video_angle = PITCH_90;
     }
-    if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].z) {
-        chassis_cmd_send.trans_mode = TRANS_DIRECT;
-    } else if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].c) {
-        chassis_cmd_send.trans_mode = TRANS_REVERSE;
-    } else {
-        chassis_cmd_send.trans_mode = TRANS_STOP;
-    }
+    // if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].z) {
+    //     chassis_cmd_send.trans_mode = TRANS_DIRECT;
+    // } else if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].c) {
+    //     chassis_cmd_send.trans_mode = TRANS_REVERSE;
+    // } else {
+    //     chassis_cmd_send.trans_mode = TRANS_STOP;
+    // }
     if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].x) {
         VisionContorl();
         //更新位置
