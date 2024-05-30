@@ -306,10 +306,10 @@ static void RemoteControlSet(void)
     }
     //平移缓启动
     if ((rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a)) || (rc_data[TEMP].rc.rocker_l_ > 200)) {
-        chassis_cmd_send.vx += 30 * speed_scale;
+        chassis_cmd_send.vx += 10 * speed_scale;
     }
     if ((rc_data[TEMP].key[KEY_PRESS].a && (!rc_data[TEMP].key[KEY_PRESS].d)) || (rc_data[TEMP].rc.rocker_l_ < -200)) {
-        chassis_cmd_send.vx -= 30 * speed_scale;
+        chassis_cmd_send.vx -= 10 * speed_scale;
     }
     if ((!rc_data[TEMP].key[KEY_PRESS].a) && (!rc_data[TEMP].key[KEY_PRESS].d) && (fabs(rc_data[TEMP].rc.rocker_l_) < 200)) {
         chassis_cmd_send.vx = 0;
