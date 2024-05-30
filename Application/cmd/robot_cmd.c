@@ -107,8 +107,8 @@ static void SuckerContorl2(void);
  * @brief 控制输入为遥控器(调试时)的模式和控制量设置
  *
  */
-static float yaw_offset = 0;
-
+static float yaw_offset    = 0;
+static uint32_t load_count = 200;
 static void RemoteControlSet(void)
 {
     arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
@@ -216,13 +216,14 @@ static void RemoteControlSet(void)
     //     arm_cmd_send.pitch_arm   = -PI / 2;
     // }
     //吸盘，遥控右拨杆上为开
-    if ((rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 1) || (rc_data[TEMP].rc.switch_right)) {
+    // || (rc_data[TEMP].rc.switch_right)
+    if ((rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 1) || switch_is_up(rc_data[TEMP].rc.switch_right)) {
         arm_cmd_send.sucker_mode = SUCKER_ON;
     } else {
         arm_cmd_send.sucker_mode = SUCKER_OFF;
     }
     //一键放矿
-    if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].b) {
+    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_B] % 2 == 1) {
         chassis_cmd_send.trans_mode = TRANS_REVERSE;
         if (rc_mode_xy[1] < 400) {
             rc_mode_xy[0] = 250;
@@ -235,9 +236,7 @@ static void RemoteControlSet(void)
             arm_cmd_send.finesse     = 0.f + yaw_offset;
             arm_cmd_send.pitch_arm   = -PI / 2;
         }
-        if (fabs(arm_fetch_data.minimal_arm - 2.01921f)) {
-            arm_cmd_send.sucker_mode = SUCKER_OFF;
-        }
+
     } else {
         chassis_cmd_send.trans_mode = TRANS_STOP;
     }

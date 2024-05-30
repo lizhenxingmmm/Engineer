@@ -63,7 +63,7 @@ void ArmInit(void)
                 .Kd = 2.8, // 达妙mit模式下的PID不需要Ki，千万不要kp = 0 && kd = 0
             },
             .angle_ramp = {
-                .rampTime = 0.006f, // 斜坡时间
+                .rampTime = 0.0002f, // 斜坡时间
             },
         },
         .controller_setting_init_config = {

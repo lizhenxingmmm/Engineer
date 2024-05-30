@@ -163,19 +163,13 @@ void ChassisTask()
 #endif
 #ifdef CHASSIS_BOARD
     chassis_cmd_recv = *(Chassis_Ctrl_Cmd_s *)UARTCommGet(chassis_usart_comm);
-#endif                                                         // CHASSIS_BOARD
-    if (chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE) { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
-        DJIMotorStop(motor_lf);
-        DJIMotorStop(motor_rf);
-        DJIMotorStop(motor_lb);
-        DJIMotorStop(motor_rb);
-    } else { // 正常工作
-        DJIMotorEnable(motor_lf);
-        DJIMotorEnable(motor_rf);
-        DJIMotorEnable(motor_lb);
-        DJIMotorEnable(motor_rb);
-        DJIMotorEnable(trans);
-    }
+#endif // CHASSIS_BOARD
+    DJIMotorEnable(motor_lf);
+    DJIMotorEnable(motor_rf);
+    DJIMotorEnable(motor_lb);
+    DJIMotorEnable(motor_rb);
+    DJIMotorEnable(trans);
+
     // 根据云台和底盘的角度offset将控制量映射到底盘坐标系上
     // 底盘逆时针旋转为角度正方向;云台命令的方向以云台指向的方向为x,采用右手系(x指向正北时y在正东)
     static float sin_theta, cos_theta;
