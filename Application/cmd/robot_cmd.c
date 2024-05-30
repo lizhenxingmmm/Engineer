@@ -111,7 +111,8 @@ static float yaw_offset    = 0;
 static uint32_t load_count = 200;
 static void RemoteControlSet(void)
 {
-    arm_cmd_send.arm_mode = ARM_HUM_CONTORL;
+    chassis_cmd_send.chassis_mode = CHASSIS_SLOW;
+    arm_cmd_send.arm_mode         = ARM_HUM_CONTORL;
     float res_scara_angle[2]; //第一个为大臂，第二个为小臂
     uint8_t switch_left_down_flag;
     uint8_t switch_left_up_flag;
@@ -236,8 +237,22 @@ static void RemoteControlSet(void)
             arm_cmd_send.finesse     = 0.f + yaw_offset;
             arm_cmd_send.pitch_arm   = -PI / 2;
         }
-
-    } else {
+    }
+    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_G] % 2 == 1) {
+        chassis_cmd_send.trans_mode = TRANS_DIRECT;
+        if (rc_mode_xy[1] < 400) {
+            rc_mode_xy[0] = 250;
+            rc_mode_xy[1] += 4;
+            arm_cmd_send.pitch_arm = -PI / 2;
+            yaw_offset             = 0;
+        } else if (rc_mode_xy[1] == 400) {
+            arm_cmd_send.maximal_arm = 1.42956f;
+            arm_cmd_send.minimal_arm = 2.01921f;
+            arm_cmd_send.finesse     = 0.f + yaw_offset;
+            arm_cmd_send.pitch_arm   = -PI / 2;
+        }
+    }
+    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_G] % 2 == 0 && rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_B] % 2 == 0) {
         chassis_cmd_send.trans_mode = TRANS_STOP;
     }
     //抬升
