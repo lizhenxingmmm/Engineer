@@ -126,6 +126,12 @@ static void RemoteControlSet(void)
         switch_left_down_flag = 0;
         switch_left_up_flag   = 0;
     }
+    //图传角度
+    if (rc_data[TEMP].key_count[KEY_PRESS][Key_V] % 2 == 1) {
+        arm_cmd_send.video_angle = PITCH_120;
+    } else {
+        arm_cmd_send.video_angle = PITCH_90;
+    }
     //取银矿模式
     if (rc_data[TEMP].key[KEY_PRESS].shift && rc_data[TEMP].key[KEY_PRESS].x) {
         rc_mode_xy[0]          = 250;
@@ -139,7 +145,7 @@ static void RemoteControlSet(void)
         yaw_offset             = 0;
     }
     //前两轴解算部分
-    if (!(rc_data[TEMP].key[KEY_PRESS].ctrl)) {
+    if ((!(rc_data[TEMP].key[KEY_PRESS].ctrl)) && (!(rc_data[TEMP].mouse.press_l && rc_data[TEMP].mouse.press_r))) {
         rc_mode_xy[1] -= rc_data[TEMP].mouse.x / 50;
         rc_mode_xy[0] -= rc_data[TEMP].mouse.y / 30;
     }
@@ -237,6 +243,7 @@ static void RemoteControlSet(void)
             arm_cmd_send.finesse     = 0.f + yaw_offset;
             arm_cmd_send.pitch_arm   = -PI / 2;
         }
+        arm_cmd_send.video_angle = PITCH_120;
     }
     if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_G] % 2 == 1) {
         chassis_cmd_send.trans_mode = TRANS_DIRECT;
@@ -251,6 +258,7 @@ static void RemoteControlSet(void)
             arm_cmd_send.finesse     = 0.f + yaw_offset;
             arm_cmd_send.pitch_arm   = -PI / 2;
         }
+        arm_cmd_send.video_angle = PITCH_120;
     }
     if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_G] % 2 == 0 && rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_B] % 2 == 0) {
         chassis_cmd_send.trans_mode = TRANS_STOP;
@@ -292,9 +300,9 @@ static void RemoteControlSet(void)
     // chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
     // chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
     // chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
-    int speed_scale = 1;
+    int speed_scale = 4;
     if (rc_data[TEMP].key[KEY_PRESS].f) {
-        speed_scale = 4;
+        speed_scale = 100;
     }
     //平移缓启动
     if ((rc_data[TEMP].key[KEY_PRESS].d && (!rc_data[TEMP].key[KEY_PRESS].a)) || (rc_data[TEMP].rc.rocker_l_ > 200)) {
@@ -306,11 +314,11 @@ static void RemoteControlSet(void)
     if ((!rc_data[TEMP].key[KEY_PRESS].a) && (!rc_data[TEMP].key[KEY_PRESS].d) && (fabs(rc_data[TEMP].rc.rocker_l_) < 200)) {
         chassis_cmd_send.vx = 0;
     }
-    if (chassis_cmd_send.vx > 7000 * speed_scale) {
-        chassis_cmd_send.vx = 7000 * speed_scale;
+    if (chassis_cmd_send.vx > 4000 * speed_scale) {
+        chassis_cmd_send.vx = 4000 * speed_scale;
     }
-    if (chassis_cmd_send.vx < -7000 * speed_scale) {
-        chassis_cmd_send.vx = -7000 * speed_scale;
+    if (chassis_cmd_send.vx < -4000 * speed_scale) {
+        chassis_cmd_send.vx = -4000 * speed_scale;
     }
     //前进缓启动
     if ((rc_data[TEMP].key[KEY_PRESS].w && (!rc_data[TEMP].key[KEY_PRESS].s)) || (rc_data[TEMP].rc.rocker_l1 > 200)) {
@@ -330,19 +338,14 @@ static void RemoteControlSet(void)
     }
     // chassis_cmd_send.vx = (rc_data[TEMP].key[KEY_PRESS].d - rc_data[TEMP].key[KEY_PRESS].a) * 30000 * 0.5f;
     // chassis_cmd_send.vy = (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 30000 * 0.5f;
-    if (rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l && rc_data[TEMP].key[KEY_PRESS].shift) {
-        chassis_cmd_send.wz = (float)rc_data[TEMP].mouse.x * 160;
+    if (rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l) {
+        chassis_cmd_send.wz = (float)rc_data[TEMP].mouse.x * 660;
     } else if (fabs(rc_data[TEMP].rc.dial) < 200) {
         chassis_cmd_send.wz = 0;
     } else {
         chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;
     }
-    //图传角度
-    if (rc_data[TEMP].key_count[KEY_PRESS][Key_V] % 2 == 1) {
-        arm_cmd_send.video_angle = PITCH_120;
-    } else {
-        arm_cmd_send.video_angle = PITCH_90;
-    }
+
     // if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].z) {
     //     chassis_cmd_send.trans_mode = TRANS_DIRECT;
     // } else if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].c) {
