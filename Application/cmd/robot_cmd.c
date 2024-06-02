@@ -107,8 +107,7 @@ static void SuckerContorl2(void);
  * @brief 控制输入为遥控器(调试时)的模式和控制量设置
  *
  */
-static float yaw_offset    = 0;
-static uint32_t load_count = 200;
+static float yaw_offset = 0;
 static void RemoteControlSet(void)
 {
     chassis_cmd_send.chassis_mode = CHASSIS_SLOW;
@@ -208,22 +207,6 @@ static void RemoteControlSet(void)
         arm_cmd_send.pitch_arm = PI / 2;
     }
     arm_cmd_send.finesse = yaw_offset - res_scara_angle[0] - res_scara_angle[1];
-    // //放矿模式基础位置
-    // //摆到放矿位置
-    // if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 1) {
-    //     arm_cmd_send.maximal_arm = 1.42956f;
-    //     arm_cmd_send.minimal_arm = 2.01921f;
-    //     arm_cmd_send.finesse     = 0.f + yaw_offset;
-    //     arm_cmd_send.pitch_arm   = -PI / 2;
-    // }
-    // if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 2) {
-    //     arm_cmd_send.maximal_arm = 0.2244f;
-    //     arm_cmd_send.minimal_arm = 2.03997f;
-    //     arm_cmd_send.finesse     = 0.0570f;
-    //     arm_cmd_send.pitch_arm   = -PI / 2;
-    // }
-    //吸盘，遥控右拨杆上为开
-    // || (rc_data[TEMP].rc.switch_right)
     if ((rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 1) || switch_is_up(rc_data[TEMP].rc.switch_right)) {
         arm_cmd_send.sucker_mode = SUCKER_ON;
     } else {
@@ -296,11 +279,7 @@ static void RemoteControlSet(void)
         arm_cmd_send.roll_mode = ROLL_KEEP;
     }
     arm_cmd_send.roll = ((30.f * rc_data[TEMP].key[KEY_PRESS].e) - (30.f * rc_data[TEMP].key[KEY_PRESS].q)) + arm_fetch_data.roll;
-    // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
-    // chassis_cmd_send.vx = 20.0f * (float)rc_data[TEMP].rc.rocker_l_; // _水平方向
-    // chassis_cmd_send.vy = 20.0f * (float)rc_data[TEMP].rc.rocker_l1; // 1竖直方向
-    // chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;     // _水平方向
-    int speed_scale = 4;
+    int speed_scale   = 4;
     if (rc_data[TEMP].key[KEY_PRESS].f) {
         speed_scale = 100;
     }
@@ -336,8 +315,6 @@ static void RemoteControlSet(void)
     if (chassis_cmd_send.vy < -15000 * speed_scale) {
         chassis_cmd_send.vy = -15000 * speed_scale;
     }
-    // chassis_cmd_send.vx = (rc_data[TEMP].key[KEY_PRESS].d - rc_data[TEMP].key[KEY_PRESS].a) * 30000 * 0.5f;
-    // chassis_cmd_send.vy = (rc_data[TEMP].key[KEY_PRESS].w - rc_data[TEMP].key[KEY_PRESS].s) * 30000 * 0.5f;
     if (rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l) {
         chassis_cmd_send.wz = (float)rc_data[TEMP].mouse.x * 660;
     } else if (fabs(rc_data[TEMP].rc.dial) < 200) {
@@ -345,14 +322,6 @@ static void RemoteControlSet(void)
     } else {
         chassis_cmd_send.wz = -10.0f * (float)rc_data[TEMP].rc.dial;
     }
-
-    // if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].z) {
-    //     chassis_cmd_send.trans_mode = TRANS_DIRECT;
-    // } else if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].c) {
-    //     chassis_cmd_send.trans_mode = TRANS_REVERSE;
-    // } else {
-    //     chassis_cmd_send.trans_mode = TRANS_STOP;
-    // }
     if (rc_data[TEMP].key[KEY_PRESS].ctrl && rc_data[TEMP].key[KEY_PRESS].x) {
         VisionContorl();
         //更新位置
@@ -377,136 +346,6 @@ static void ArmKeep(void)
     arm_cmd_send.lift_mode   = LIFT_KEEP;
     arm_cmd_send.roll_mode   = ROLL_KEEP;
     arm_cmd_send.arm_status  = ARM_NORMAL;
-}
-
-/**
- * @brief 一键回收模式调用函数
- *
- */
-static void Recycle(void)
-{
-
-    arm_cmd_send.maximal_arm = -0.5589f;
-    arm_cmd_send.minimal_arm = 2.4730f;
-    arm_cmd_send.finesse     = 1.2339f;
-    arm_cmd_send.pitch_arm   = 0.5509f;
-    arm_cmd_send.lift        = -5;
-    arm_cmd_send.lift_mode   = 1;
-    arm_cmd_send.arm_status  = ARM_RECYCLE;
-    // arm_cmd_send.roll = arm_fetch_data.roll;
-    // arm_cmd_send.lift = arm_fetch_data.height;
-}
-
-/**
- * @brief 从车上取矿
- *
- */
-static void GetRockFromCar(void)
-{
-    arm_cmd_send.maximal_arm = 1.2956f;
-    arm_cmd_send.minimal_arm = 2.1921f;
-    arm_cmd_send.finesse     = -0.1894f;
-    arm_cmd_send.pitch_arm   = -1.6172f;
-    arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
-    if (video_data[TEMP].key_data.left_button_down) {
-        arm_cmd_send.lift = -25000 + arm_fetch_data.height;
-    }
-    if (video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.lift = 25000 + arm_fetch_data.height;
-    }
-    arm_cmd_send.roll       = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
-    arm_cmd_send.lift_mode  = LIFT_ANGLE_MODE;
-    arm_cmd_send.roll_mode  = ROLL_ANGLE_MODE;
-    arm_cmd_send.arm_status = ARM_GETCARROCK;
-}
-/**
- * @brief 从车上取矿2,取矿后取出,避免矿石碰到 车
- *
- */
-static void GetRockFromCar2(void)
-{
-    arm_cmd_send.maximal_arm = -0.2244f;
-    arm_cmd_send.minimal_arm = 2.3997f;
-    arm_cmd_send.finesse     = 0.0570f;
-    arm_cmd_send.pitch_arm   = -1.610f;
-    arm_cmd_send.lift        = -video_data[TEMP].cus.height + arm_fetch_data.height;
-    arm_cmd_send.roll        = -video_data[TEMP].cus.roll_arm_target * 57.3f * 10;
-    arm_cmd_send.lift_mode   = LIFT_ANGLE_MODE;
-    arm_cmd_send.roll_mode   = ROLL_ANGLE_MODE;
-    arm_cmd_send.arm_status  = ARM_GETCARROCK2;
-}
-
-static void DebugModeControl(void)
-{
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_D] % 2) {
-        case 0:
-            arm_cmd_send.download_mode = DOWNLOAD_OFF;
-            break;
-        default:
-            arm_cmd_send.download_mode = DOWNLOAD_ON;
-            break;
-    }
-}
-
-/**
- * @brief 吸盘控制
- *
- */
-static void SuckerContorl(void)
-{
-    switch (video_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
-        case 1:
-            arm_cmd_send.sucker_mode = SUCKER_ON;
-            break;
-        default:
-            arm_cmd_send.sucker_mode = SUCKER_OFF;
-            break;
-    }
-}
-
-static void SuckerContorl2(void)
-{
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2) {
-        case 1:
-            arm_cmd_send.sucker_mode = SUCKER_ON;
-            break;
-        default:
-            arm_cmd_send.sucker_mode = SUCKER_OFF;
-            break;
-    }
-}
-
-/**
- * @brief 一键取矿模式，根据按钮下的按键数量判断机械臂应该达到的位置
- *
- */
-static void VideoAutoGet(void)
-{
-    arm_cmd_send.arm_mode = ARM_AUTO_CONTORL;
-    if (arm_cmd_send.arm_mode != arm_cmd_send.arm_mode_last) {
-        ArmKeep();
-        video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] = 0; // 清零，确保每次都从初始状态开始
-    }
-    switch (video_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 2) {
-        case 0:
-            Recycle();
-            break;
-        default:
-            arm_cmd_send.maximal_arm = 0.f;
-            arm_cmd_send.minimal_arm = -0.1771f;
-            arm_cmd_send.finesse     = -0.5460f;
-            arm_cmd_send.pitch_arm   = 0.696f;
-            break;
-    }
-
-    if (video_data[TEMP].key_data.left_button_down || video_data[TEMP].key_data.right_button_down) {
-        arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
-    } else {
-        arm_cmd_send.lift_mode = LIFT_KEEP;
-    }
-    arm_cmd_send.lift = (3 * (video_data[TEMP].key_data.left_button_down) - 6 * (video_data[TEMP].key_data.right_button_down)) * 10 + arm_fetch_data.height;
-
-    arm_cmd_send.arm_mode_last = arm_cmd_send.arm_mode;
 }
 
 /**
