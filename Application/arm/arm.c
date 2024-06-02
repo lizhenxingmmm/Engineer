@@ -1,17 +1,13 @@
 #include "arm.h"
 #include "robot_def.h"
-// test nb
 #include "dmmotor.h"
 #include "DJI_motor.h"
 #include "message_center.h"
 #include "user_lib.h"
 #include "tim.h"
 #include "bsp_dwt.h"
-// 大臂 -0.19 小臂 -0.79就寄啦？
 #define LIFT_OFFSET (-287.81269f)
 #define ROLL_OFFSET 35.07f
-
-// 图传链路 大臂零位maximal_arm -0.96 小臂零位minimal_arm 0.43 手腕零位 finesse 0.03 pitch_arm 零位 0.66
 static Publisher_t *arm_pub;  // 用于发布底盘的数据
 static Subscriber_t *arm_sub; // 用于订阅底盘的控制命令
 
@@ -35,7 +31,7 @@ static void Roll_Calculation(void)
 
 static void Sucker_Init(void)
 {
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); //?????????1??PWM???
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); 
     __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 2000);
     DWT_Delay(2);
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
@@ -45,7 +41,7 @@ static void Sucker_Init(void)
 
 static void VideoDeviceInit(void)
 {
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2); //?????????1??PWM???
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 }
 
 void ArmInit(void)

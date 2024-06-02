@@ -26,10 +26,6 @@
 #include "scara_kinematics.h"
 #include "arm_math.h"
 #include "UARTComm.h"
-// #ifdef CHASSIS_BOARD
-// static Publisher_t *chassis_cmd_pub;   // 底盘控制消息发布者
-// static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
-// #endif
 
 static float rc_mode_xy[2]             = {0, 0}; // x,y坐标
 static float rc_mode_xy_after_check[2] = {0, 0};
@@ -48,6 +44,10 @@ static void RemoteControlSet(void);               // 遥控器控制量设置
 static void VideoControlSet(void);                // 图传链路控制量设置
 static RC_ctrl_t *rc_data;                        // 遥控器数据指针,初始化时返回
 static Video_ctrl_t *video_data;                  // 视觉数据指针,初始化时返回
+
+static float scara_height;         //@bi
+static uint8_t crazy_chassis_flag; //@bi
+
 static void VisionContorl(void);
 /**
  * @brief 机器人核心控制任务初始化,会被RobotInit()调用
