@@ -18,10 +18,11 @@ static DM_MotorInstance *maximal_arm, *minimal_arm, *finesse, *pitch_arm;
 static DJIMotor_Instance *lift, *roll;
 static int8_t is_init, lift_init_flag = 0;
 static float roll_init_angle, roll_real, lift_motor_init_angle, lift_init_height, height, lift_speed_feedfoward = 5.0f, lift_current_feedfoward = 1.f;
-
+extern float scara_height;
 static void Height_Calculation(void)
 {
-    height = -(lift->measure.total_angle - lift_motor_init_angle) / LIFT_OFFSET - lift_init_height;
+    scara_height = (lift->measure.total_angle) * 2 / LIFT_OFFSET;
+    height       = -(lift->measure.total_angle - lift_motor_init_angle) / LIFT_OFFSET - lift_init_height;
 }
 
 static void Roll_Calculation(void)
@@ -31,7 +32,7 @@ static void Roll_Calculation(void)
 
 static void Sucker_Init(void)
 {
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); 
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
     __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 2000);
     DWT_Delay(2);
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);

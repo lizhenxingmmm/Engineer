@@ -45,8 +45,9 @@ static void VideoControlSet(void);                // 图传链路控制量设置
 static RC_ctrl_t *rc_data;                        // 遥控器数据指针,初始化时返回
 static Video_ctrl_t *video_data;                  // 视觉数据指针,初始化时返回
 
-static float scara_height;         //@bi
-static uint8_t crazy_chassis_flag; //@bi
+float scara_height;         //@bi
+uint8_t crazy_chassis_flag; //@bi
+pid_type_def PID_lift;      //鉴于上一个写代码风格的过于抽象，只好自己写一个
 
 static void VisionContorl(void);
 /**
@@ -105,6 +106,7 @@ void RobotCMDTask(void)
 
 static void RemoteControlSet(void)
 {
+    PID_init(&PID_lift, PID_POSITION, 500, 30, 0, 50000, 30000);
     chassis_cmd_send.chassis_mode = CHASSIS_SLOW;
     arm_cmd_send.arm_mode         = ARM_HUM_CONTORL;
     float res_scara_angle[2]; //第一个为大臂，第二个为小臂
@@ -173,7 +175,7 @@ static void RemoteControlSet(void)
     scara_inverse_kinematics(rc_mode_xy_after_check[0], rc_mode_xy_after_check[1], ARMLENGHT1, ARMLENGHT2, 2, res_scara_angle);
     arm_cmd_send.maximal_arm = res_scara_angle[0];
     arm_cmd_send.minimal_arm = res_scara_angle[1];
-    //末端三轴和抬升部分
+    //末端三轴
     // yaw pitch
     if ((!(rc_data[TEMP].mouse.press_r && rc_data[TEMP].mouse.press_l && rc_data[TEMP].key[KEY_PRESS].shift)) && (rc_data[TEMP].key[KEY_PRESS].ctrl)) {
         if (rc_data[TEMP].mouse.x > 10) {
@@ -242,16 +244,10 @@ static void RemoteControlSet(void)
         chassis_cmd_send.trans_mode = TRANS_STOP;
     }
     //抬升
-    if (rc_data[TEMP].mouse.press_l || rc_data[TEMP].mouse.press_r || switch_left_down_flag || switch_left_up_flag) {
-        // arm_cmd_send.lift_mode = LIFT_ANGLE_MODE;
-        arm_cmd_send.lift_mode = LIFT_SPEED_MODE;
-    } else {
-        arm_cmd_send.lift_mode = LIFT_KEEP;
-    }
     if (rc_data[TEMP].mouse.press_l && (!rc_data[TEMP].mouse.press_r)) {
-        arm_cmd_send.lift += 300;
+        arm_cmd_send.lift += 500;
     } else if (rc_data[TEMP].mouse.press_r && (!rc_data[TEMP].mouse.press_l)) {
-        arm_cmd_send.lift -= 300;
+        arm_cmd_send.lift -= 500;
     } else {
         arm_cmd_send.lift = 0;
     }
@@ -261,11 +257,24 @@ static void RemoteControlSet(void)
     if (switch_left_up_flag) {
         arm_cmd_send.lift = -10000;
     }
-    if (arm_cmd_send.lift > 30000) {
-        arm_cmd_send.lift = 30000;
+    if (arm_cmd_send.lift > 50000) {
+        arm_cmd_send.lift = 50000;
     }
-    if (arm_cmd_send.lift < -30000) {
-        arm_cmd_send.lift = -30000;
+    if (arm_cmd_send.lift < -50000) {
+        arm_cmd_send.lift = -50000;
+    }
+    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 1) {
+        arm_cmd_send.lift_mode = LIFT_SPEED_MODE;
+        arm_cmd_send.lift      = -PID_calc(&PID_lift, scara_height, 120);
+    }
+    if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_Z] % 3 == 2) {
+        arm_cmd_send.lift_mode = LIFT_SPEED_MODE;
+        arm_cmd_send.lift      = -PID_calc(&PID_lift, scara_height, 165);
+    }
+    if (arm_cmd_send.lift == 0) {
+        arm_cmd_send.lift_mode = LIFT_KEEP;
+    } else {
+        arm_cmd_send.lift_mode = LIFT_SPEED_MODE;
     }
     // roll
     if (rc_data[TEMP].key[KEY_PRESS].q || rc_data[TEMP].key[KEY_PRESS].e) {
